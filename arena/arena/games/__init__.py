@@ -8,9 +8,11 @@
     summary() -> {}   the game's own metrics, always including "steps"
     close()
 """
+from .blackjack import BlackjackGame
 from .highway import HighwayGame
+from .snake import SnakeGame
 
-GAMES = {"highway": HighwayGame}
+GAMES = {"highway": HighwayGame, "snake": SnakeGame, "blackjack": BlackjackGame}
 GAME_NAMES = list(GAMES)
 
 

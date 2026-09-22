@@ -33,7 +33,9 @@ def make_agent(name, game="highway", seed=0, laya_checkpoint=None):
         return laya.load(os.environ.get("LAYA_PATH", "models/laya"), laya_checkpoint)
     game_baselines = _game_class(game).baselines
     if name in game_baselines:
-        return game_baselines[name](seed)
+        agent = game_baselines[name](seed)
+        agent.name = name  # recordings and the UI refer to baselines by this name
+        return agent
     raise ValueError(f"unknown agent: {name}")
 
 

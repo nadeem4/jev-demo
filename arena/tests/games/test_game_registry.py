@@ -4,7 +4,7 @@ from arena.games import GAME_NAMES, make_game
 
 
 def test_lists_the_games():
-    assert GAME_NAMES == ["highway"]
+    assert GAME_NAMES == ["highway", "snake", "blackjack"]
 
 
 def test_every_game_has_the_interface_the_runner_needs():

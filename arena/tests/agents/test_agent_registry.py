@@ -9,8 +9,14 @@ def test_every_game_offers_jev_laya_and_its_own_baselines():
 
 
 def test_builds_a_game_baseline_by_name():
-    assert make_agent("idle", game="highway").name == "always-IDLE"
+    assert make_agent("idle", game="highway").name == "idle"  # recordings and the UI use this name
     assert make_agent("random", game="highway").name == "random"
+
+
+def test_each_game_has_its_own_baselines():
+    assert agent_names("snake") == ["jev", "laya", "greedy", "random"]
+    assert agent_names("blackjack") == ["jev", "laya", "basic-strategy", "always-stick", "random"]
+    assert make_agent("always-stick", game="blackjack").name == "always-stick"
 
 
 def test_builds_jev_from_the_environment(monkeypatch):
