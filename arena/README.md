@@ -96,3 +96,20 @@ uv run pytest
 ## Results
 
 The latest benchmark for each game is on the Results page. The first local run's summary is below.
+
+**First benchmark, September 22, 2026:** 10 episodes per agent, seeds 0 to 9. Jev ran through Vercel AI Gateway and Laya's multilingual checkpoint ran on CPU. Ranges are 95% intervals.
+
+| Game | Jev | Laya | Best baseline | Worst baseline |
+|---|---|---|---|---|
+| Highway, crash rate | **0%** (0 to 28%), 851 m | 90% (60 to 98%), 437 m | Keep lane: 90%, 582 m | Random: 100% |
+| Snake, food eaten / death rate | 1.8 / **0%** | 0.5 / 90% | Greedy: **17.3** / 40% | Random: 0.2 / 100% |
+| Blackjack, matches basic strategy | **77%** (73 to 81%) | 50% (42 to 57%) | Basic strategy: 100% | Random: 49% |
+
+What the recordings show:
+
+- **Laya does not adapt its moves to the situation.** In Blackjack it chose stick on all 200 decisions, so it scored exactly like the always-stick baseline. In Highway it crashed as often as doing nothing, and 64% of its decisions (116 of 181) were lane changes into a lane that doesn't exist.
+- **Jev is safe but passive.** It never crashed on the highway: it kept its lane on 94% of decisions (375 of 400) and drove near the minimum speed. In Snake it never died, but it ate little: 71% of its moves were right turns, so it often circled until the 60-moves-without-food limit ended the game.
+- **Neither model plans.** The greedy Snake baseline, a few lines of code, ate about 10 times more food than Jev.
+- **Speed:** Jev's typical decision took about 305 ms through the Gateway, with 1,231 rate-limit retries across the run. Laya took 107 to 185 ms on CPU.
+
+Ten episodes is a first look, not a verdict: several intervals are wide. The next step is 50 or more episodes per agent in Colab, with Laya on a GPU.
