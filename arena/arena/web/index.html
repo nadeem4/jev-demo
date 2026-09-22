@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision Arena</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Crect width=%2216%22 height=%2216%22 rx=%223%22 fill=%22%2300674A%22/%3E%3Cpath d=%22M8 13V3M4 7l4-4 4 4%22 stroke=%22white%22 stroke-width=%222%22 fill=%22none%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --concrete: #D5D8D1;
+    --concrete-edge: #B9BDB4;
+    --ink: #1D2021;
+    --ink-soft: #4A4F50;
+    --sign: #00674A;
+    --sign-deep: #004F39;
+    --sign-white: #F5F7F5;
+    --asphalt: #2E3133;
+    --marking: #F2C230;
+    --hazard: #D8342C;
+    --page: var(--concrete);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #1B1E1F; --ink: #E6E8E4; --ink-soft: #A3A8A4; --concrete-edge: #3A3E3F;
+    }
+  }
+  :root[data-theme="dark"] { --page: #1B1E1F; --ink: #E6E8E4; --ink-soft: #A3A8A4; --concrete-edge: #3A3E3F; }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font: 400 16px/1.5 Overpass, system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+
+  h1 { font-weight: 800; font-size: 2.25rem; line-height: 1.1; margin: 0; letter-spacing: -0.01em; }
+  .intro { color: var(--ink-soft); margin: 6px 0 20px; max-width: 64ch; }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end;
+    padding: 14px 0 18px; border-bottom: 2px solid var(--concrete-edge); margin-bottom: 20px;
+  }
+  .field { display: grid; gap: 4px; font-size: 0.875rem; color: var(--ink-soft); }
+  select, input[type=number] {
+    font: inherit; color: var(--ink); background: transparent; min-height: 40px;
+    border: 2px solid var(--concrete-edge); border-radius: 6px; padding: 6px 10px;
+  }
+  input[type=number] { width: 7ch; }
+  .mode { display: flex; border: 2px solid var(--concrete-edge); border-radius: 6px; overflow: hidden; }
+  .mode label { padding: 8px 14px; cursor: pointer; color: var(--ink); }
+  .mode input { position: absolute; opacity: 0; }
+  .mode input:checked + span { font-weight: 800; }
+  .mode label:has(input:checked) { background: var(--sign); color: var(--sign-white); }
+  button.play {
+    font: 800 1rem Overpass, system-ui, sans-serif; min-height: 44px; padding: 8px 26px;
+    background: var(--sign); color: var(--sign-white); border: 0; border-radius: 6px; cursor: pointer;
+  }
+  button.play:hover { background: var(--sign-deep); }
+  :is(button, select, input, label):focus-visible { outline: 3px solid var(--marking); outline-offset: 2px; }
+  .mode label:has(input:focus-visible) { outline: 3px solid var(--marking); outline-offset: -3px; }
+
+  .duel { margin-bottom: 28px; }
+
+  /* The gantry: an overhead highway sign showing the model's options */
+  .gantry {
+    background: var(--sign); color: var(--sign-white); border-radius: 8px 8px 0 0;
+    border: 3px solid var(--sign-white); outline: 2px solid var(--sign-deep);
+    padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center;
+  }
+  .who { min-width: 180px; }
+  .who strong { display: block; font-weight: 800; font-size: 1.5rem; line-height: 1.1; }
+  .who span { font-size: 0.875rem; opacity: 0.85; }
+  .options { display: grid; grid-template-columns: repeat(5, minmax(64px, 1fr)); gap: 8px; flex: 1; min-width: 320px; }
+  .opt {
+    position: relative; overflow: hidden; border: 2px solid rgba(245,247,245,0.55); border-radius: 5px;
+    padding: 6px 4px 4px; text-align: center; font-size: 0.8125rem; line-height: 1.2;
+  }
+  .opt .fill { position: absolute; inset: auto 0 0 0; height: 0; background: rgba(245,247,245,0.22); transition: height 180ms ease-out; }
+  .opt svg { width: 22px; height: 22px; display: block; margin: 0 auto 2px; position: relative; }
+  .opt b { display: block; font-weight: 800; font-size: 1rem; position: relative; }
+  .opt span { position: relative; }
+  .opt.chosen { background: var(--sign-white); color: var(--sign); border-color: var(--sign-white); }
+  .opt.chosen .fill { background: rgba(0,103,74,0.18); }
+  .gantry .note { flex-basis: 100%; font-size: 0.875rem; min-height: 1.3em; opacity: 0.9; }
+
+  canvas { display: block; width: 100%; height: 150px; background: var(--asphalt); }
+
+  .readout { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding: 10px 2px 0; }
+  .stat small { display: block; font-size: 0.8125rem; color: var(--ink-soft); }
+  .stat output { font-weight: 800; font-size: 1.25rem; }
+  .stat output.crash { color: var(--hazard); }
+  details { margin-top: 8px; color: var(--ink-soft); font-size: 0.9375rem; }
+  summary { cursor: pointer; color: var(--ink); }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; margin: 8px 0 0; }
+  dt { color: var(--ink-soft); } dd { margin: 0; color: var(--ink); }
+  .blocked { color: var(--hazard); font-weight: 600; }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 1.75rem; }
+    .readout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .options { min-width: 0; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .opt { font-size: 0.6875rem; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Decision Arena</h1>
+  <p class="intro">Two decision models drive the same traffic. Neither was trained to drive: each second they read a description of the road and pick one of five moves.</p>
+
+  <form class="controls" id="controls">
+    <div class="field">Source
+      <div class="mode" role="radiogroup" aria-label="Source">
+        <label><input type="radio" name="mode" value="live" checked><span>Live</span></label>
+        <label><input type="radio" name="mode" value="replay"><span>Recording</span></label>
+      </div>
+    </div>
+    <label class="field">Top road <select name="a"></select></label>
+    <label class="field">Bottom road <select name="b"></select></label>
+    <label class="field">Traffic <input type="number" name="seed" value="0" min="0" step="1"></label>
+    <label class="field">Playback
+      <select name="speed"><option value="1">1× real time</option><option value="2">2×</option><option value="4">4×</option></select>
+    </label>
+    <button class="play" type="submit">Play</button>
+  </form>
+
+  <section class="duel" id="duel-a"></section>
+  <section class="duel" id="duel-b"></section>
+</main>
+
+<template id="duel-template">
+  <div class="gantry">
+    <div class="who"><strong></strong><span></span></div>
+    <div class="options"></div>
+    <div class="note" aria-live="polite"></div>
+  </div>
+  <canvas></canvas>
+  <div class="readout">
+    <div class="stat"><small>Distance</small><output data-k="distance">0 m</output></div>
+    <div class="stat"><small>Speed</small><output data-k="speed">–</output></div>
+    <div class="stat"><small>Decision time</small><output data-k="latency">–</output></div>
+    <div class="stat"><small>Status</small><output data-k="status">Ready</output></div>
+  </div>
+  <details><summary>What the model was told</summary><dl></dl></details>
+</template>
+
+<script>
+const AGENTS = {
+  jev:    { name: "Jev",    sub: "TypeSafe, closed API" },
+  laya:   { name: "Laya",   sub: "Open source, runs locally" },
+  idle:   { name: "Keep lane", sub: "Baseline: never changes anything" },
+  random: { name: "Random", sub: "Baseline: picks at random" },
+};
+const ACTIONS = [
+  ["LANE_LEFT", "Left lane", "M18 18 L18 11 Q18 6 13 6 L6 6 M10 2 L6 6 L10 10"],
+  ["IDLE", "Keep", "M12 20 L12 4 M7 9 L12 4 L17 9"],
+  ["LANE_RIGHT", "Right lane", "M6 18 L6 11 Q6 6 11 6 L18 6 M14 2 L18 6 L14 10"],
+  ["FASTER", "Faster", "M6 13 L12 7 L18 13 M6 19 L12 13 L18 19"],
+  ["SLOWER", "Slower", "M6 5 L12 11 L18 5 M6 11 L12 17 L18 11"],
+];
+const STATE_LABELS = { your_lane: "Your lane", your_speed: "Your speed", ahead_in_your_lane: "Ahead", left_lane: "Left lane", right_lane: "Right lane" };
+const LANE_W = 4, LANES = 4, VIEW_BEHIND = 35, VIEW_AHEAD = 115, CAR_L = 5, CAR_W = 2;
+
+const form = document.getElementById("controls");
+for (const sel of [form.a, form.b]) {
+  for (const [id, a] of Object.entries(AGENTS)) sel.add(new Option(a.name, id));
+}
+form.a.value = "jev"; form.b.value = "laya";
+
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+class Duel {
+  constructor(el) {
+    this.el = el;
+    el.append(document.getElementById("duel-template").content.cloneNode(true));
+    this.q = (s) => el.querySelector(s);
+    this.canvas = this.q("canvas");
+    this.ctx = this.canvas.getContext("2d");
+    this.q(".options").innerHTML = ACTIONS.map(([id, label, path]) =>
+      `<div class="opt" data-a="${id}"><div class="fill"></div>` +
+      `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>` +
+      `<span>${label}</span><b>–</b></div>`).join("");
+    this.reset();
+  }
+  reset(agent) {
+    this.source?.close();
+    this.queue = []; this.prev = this.next = null; this.stepStart = 0; this.done = false; this.failed = false; this.startX = null;
+    if (agent) {
+      this.q(".who strong").textContent = AGENTS[agent].name;
+      this.q(".who span").textContent = AGENTS[agent].sub;
+    }
+    this.setOptions(null);
+    this.note("");
+    this.set("distance", "0 m"); this.set("speed", "–"); this.set("latency", "–"); this.set("status", "Ready");
+    this.q("dl").innerHTML = "";
+  }
+  set(key, text, cls = "") { const o = this.q(`output[data-k=${key}]`); o.textContent = text; o.className = cls; }
+  note(text) { this.q(".note").textContent = text; }
+  setOptions(answers, chosen) {
+    const probs = answers?.action?.probabilities ?? {};
+    for (const opt of this.q(".options").children) {
+      const p = probs[opt.dataset.a];
+      opt.querySelector(".fill").style.height = p == null ? "0" : `${Math.round(p * 100)}%`;
+      opt.querySelector("b").textContent = p == null ? "–" : `${Math.round(p * 100)}%`;
+      opt.classList.toggle("chosen", opt.dataset.a === chosen);
+    }
+  }
+  push(ev) {
+    if (ev.type === "status") return this.note(ev.message);
+    if (ev.type === "error") { this.failed = true; this.note(ev.message); this.set("status", "Error", "crash"); return; }
+    if (ev.type === "start") { this.prev = this.next = ev.frame; this.startX = ev.frame.ego.x; this.note(""); this.set("status", "Driving"); return; }
+    this.queue.push(ev);
+  }
+  // Called every animation frame: plays one step per (1 s / speed), interpolating positions.
+  tick(now, stepMs, go) {
+    if (!go) { this.stepStart = now; this.draw(0); return; }
+    if (this.next && now - this.stepStart >= stepMs && this.queue.length) {
+      const ev = this.queue.shift();
+      this.prev = this.next;
+      if (ev.type === "step") { this.next = ev.frame; this.show(ev); }
+      else if (ev.type === "end") this.finish(ev);
+      this.stepStart = now;
+    } else if (this.next && !this.queue.length && !this.done && this.source && now - this.stepStart > stepMs) {
+      this.note(`${this.q(".who strong").textContent} is deciding…`);
+    }
+    const t = this.next ? Math.min(1, (now - this.stepStart) / stepMs) : 0;
+    this.draw(t);
+  }
+  show(ev) {
+    this.note(ev.error ? `Decision failed (${ev.error}), kept lane instead` : "");
+    this.setOptions(ev.answers, ev.action);
+    this.set("latency", `${Math.round(ev.latency_ms)} ms`);
+    this.set("speed", `${Math.round(ev.frame.ego.speed)} m/s`);
+    this.set("distance", `${Math.round(ev.frame.ego.x - this.startX)} m`);
+    this.q("dl").innerHTML = Object.entries(ev.state).map(([k, v]) =>
+      `<dt>${STATE_LABELS[k] ?? k}</dt><dd class="${v.startsWith("BLOCKED") ? "blocked" : ""}">${v}</dd>`).join("");
+  }
+  finish(end) {
+    this.done = true; this.source?.close();
+    if (end.crashed) this.set("status", `Crashed at ${end.steps} s`, "crash");
+    else this.set("status", `Finished, ${end.steps} s`);
+    this.note(end.crashed ? "Crashed." : "Made it to the end without a crash.");
+  }
+  draw(t) {
+    const c = this.canvas, dpr = devicePixelRatio || 1;
+    const w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== w * dpr || c.height !== h * dpr) { c.width = w * dpr; c.height = h * dpr; }
+    const g = this.ctx; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = css("--asphalt"); g.fillRect(0, 0, w, h);
+    if (!this.next) return;
+
+    const lerp = (a, b) => a + (b - a) * t;
+    const ego = { x: lerp(this.prev.ego.x, this.next.ego.x), y: lerp(this.prev.ego.y, this.next.ego.y), heading: lerp(this.prev.ego.heading, this.next.ego.heading) };
+    const scale = w / (VIEW_BEHIND + VIEW_AHEAD);
+    const roadH = LANES * LANE_W * scale, top = (h - roadH) / 2;
+    const sx = (x) => (x - ego.x + VIEW_BEHIND) * scale;
+    const sy = (y) => top + (y + LANE_W / 2) * scale;
+
+    // Lane markings: solid edges, dashed dividers that scroll with the world.
+    g.strokeStyle = css("--sign-white"); g.lineWidth = 2;
+    for (const y of [-LANE_W / 2, (LANES - 0.5) * LANE_W]) { g.beginPath(); g.moveTo(0, sy(y)); g.lineTo(w, sy(y)); g.stroke(); }
+    g.setLineDash([3 * scale, 6 * scale]); g.lineDashOffset = (ego.x % 9) * scale;
+    for (let i = 1; i < LANES; i++) { const y = sy((i - 0.5) * LANE_W); g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); }
+    g.setLineDash([]);
+
+    const car = (x, y, heading, fill) => {
+      g.save(); g.translate(sx(x), sy(y)); g.rotate(heading);
+      g.fillStyle = fill; g.fillRect(-CAR_L / 2 * scale, -CAR_W / 2 * scale, CAR_L * scale, CAR_W * scale);
+      g.restore();
+    };
+    // Match other cars across frames by index (frames list nearby cars in a stable order).
+    const others = this.next.others.map((o, i) => {
+      const p = this.prev.others[i];
+      return p && Math.abs(p.x - o.x) < 60 ? { x: lerp(p.x, o.x), y: lerp(p.y, o.y), heading: o.heading } : o;
+    });
+    for (const o of others) car(o.x, o.y, o.heading, "#C9CDC6");
+    const crashed = this.done && this.next.ego.crashed && t >= 1;
+    car(ego.x, ego.y, ego.heading, crashed ? css("--hazard") : css("--marking"));
+  }
+}
+
+const duels = [new Duel(document.getElementById("duel-a")), new Duel(document.getElementById("duel-b"))];
+let stepMs = 1000;
+
+function start(duel, agent, seed, mode) {
+  duel.reset(agent);
+  if (mode === "live") {
+    duel.note(`Starting ${AGENTS[agent].name}…`);
+    const src = new EventSource(`/api/live?agent=${agent}&seed=${seed}`);
+    duel.source = src;
+    src.onmessage = (m) => duel.push(JSON.parse(m.data));
+    src.onerror = () => { if (!duel.done) duel.note("Connection to the arena server was lost. Is it still running?"); src.close(); };
+  } else {
+    fetch(`/api/runs/highway/${agent}/${seed}`).then(async (r) => {
+      if (!r.ok) {
+        duel.failed = true;
+        duel.note(`No recording of ${AGENTS[agent].name} on traffic ${seed}. Record one with: uv run python -m arena.record --agent ${agent} --seed-start ${seed} --episodes 1`);
+        return;
+      }
+      for (const ev of await r.json()) duel.push(ev);
+    });
+  }
+}
+
+form.addEventListener("submit", (e) => {
+  e.preventDefault();
+  stepMs = 1000 / Number(form.speed.value);
+  const seed = Math.max(0, Math.floor(Number(form.seed.value) || 0));
+  start(duels[0], form.a.value, seed, form.mode.value);
+  start(duels[1], form.b.value, seed, form.mode.value);
+});
+form.speed.addEventListener("change", () => { stepMs = 1000 / Number(form.speed.value); });
+
+duels[0].reset("jev"); duels[1].reset("laya");
+// Both roads start together: playback waits until every road has its first frame (or failed).
+(function loop(now) {
+  const go = duels.every((d) => d.next || d.failed);
+  for (const d of duels) d.tick(now, stepMs, go);
+  requestAnimationFrame(loop);
+})(performance.now());
+</script>
+</body>
+</html>

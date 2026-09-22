@@ -36,7 +36,20 @@ Jev looks for keys in the environment, then in the repo-root `.env`:
 
 On Windows, Hugging Face's cache symlinks fail without Developer Mode, which is why Laya is downloaded to `models/laya`. PyTorch comes from the CUDA 12.6 index (`pyproject.toml`). If your NVIDIA driver is too old, Laya falls back to CPU at roughly 200–2000ms per decision, compared with about 33ms on a GPU.
 
-## Run
+## Watch them drive
+
+```
+uv run python -m arena.server      # open http://localhost:8000
+```
+
+Pick a model for each road (Jev, Laya, keep-lane, random) and a traffic seed, then click **Play**. Both roads get identical traffic.
+
+- **Live** runs both models right now. The server starts loading Laya when it launches, and both roads wait for each other so they start together.
+- **Recording** replays episodes from `runs/`, which is instant and needs no API calls.
+
+The overhead sign above each road shows the model's probability for each of the five moves, with the chosen move lit. Open "What the model was told" to see the text the model read at that step. The server (`arena/server.py`) uses only the standard library: server-sent events for live play and JSON files for recordings. The page is a single file, `arena/web/index.html`.
+
+## Record episodes
 
 ```
 uv run python -m arena.record --agent jev --episodes 3
