@@ -87,6 +87,18 @@ def _git_commit():
         return None
 
 
+def usable_device(torch):
+    """The GPU can be visible but unusable (e.g. an old NVIDIA driver); only report
+    "cuda" if running on it actually works, which is when Laya uses it."""
+    if not torch.cuda.is_available():
+        return "cpu"
+    try:
+        torch.zeros(1, device="cuda")
+        return "cuda"
+    except Exception:
+        return "cpu"
+
+
 def _model_info(names, laya_checkpoint):
     info = {}
     if "jev" in names:
@@ -94,7 +106,7 @@ def _model_info(names, laya_checkpoint):
                        "model": agents_mod.jev.TYPESAFE_MODEL}
     if "laya" in names:
         import torch
-        info["laya"] = {"checkpoint": laya_checkpoint or "english", "device": "cuda" if torch.cuda.is_available() else "cpu"}
+        info["laya"] = {"checkpoint": laya_checkpoint or "english", "device": usable_device(torch)}
     return info
 
 

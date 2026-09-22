@@ -99,3 +99,25 @@ def test_writes_results_after_each_agent_so_a_stopped_run_keeps_them(tmp_path):
         pass
     saved = [json.loads(f.read_text()) for f in (tmp_path / "results" / "highway").glob("*.json")]
     assert len(saved) == 1 and list(saved[0]["agents"]) == ["idle"]
+
+
+def test_reports_cpu_when_the_gpu_is_visible_but_unusable():
+    from arena.bench import usable_device
+
+    class BrokenCuda:  # the GPU shows up, but running on it fails (e.g. a driver that is too old)
+        class cuda:
+            @staticmethod
+            def is_available():
+                return True
+        @staticmethod
+        def zeros(*a, **kw):
+            raise RuntimeError("CUDA error: device unavailable")
+
+    class NoCuda:
+        class cuda:
+            @staticmethod
+            def is_available():
+                return False
+
+    assert usable_device(BrokenCuda) == "cpu"
+    assert usable_device(NoCuda) == "cpu"

@@ -10,8 +10,11 @@ A Next.js app with three pages, backed by the Python arena server (see [../READM
 npm install
 npm run dev      # http://localhost:3000
 npm test         # Vitest: playback, game config, insights, highway drawing
-npm run build    # static site in out/
+npm run build    # static site in out/, reading from the arena server
+npm run preview:static   # the published site: static data, no server, on http://localhost:4000
 ```
+
+`preview:static` builds with `NEXT_PUBLIC_SITE_MODE=static`, so the site reads `public/data/` instead of the arena server: recorded games, results and Learn, but no live play. Refresh that data first with `uv run python -m arena.export` in the arena folder.
 
 The app is fully client-side, so `next build` produces a static export (`output: "export"`, `trailingSlash: true`). In Docker it's served by nginx (see `Dockerfile`), and any static host can serve it.
 

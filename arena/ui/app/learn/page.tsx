@@ -49,7 +49,7 @@ const ROWS: [string, string, string][] = [
   ["Size", "Not published", "421M (English) or 322M (multilingual) parameters"],
   ["Input limit", "About 64,000 tokens per request, 32,000 for the state", "512 tokens (English), 1,024 (multilingual)"],
   ["Options per choice", "Up to 255", "Works best under about 20; options share a 192 to 256 token budget"],
-  ["Training", "RLCD (Reinforcement Learning for Calibrated Decisions)", "RLCD, as described by Laya's authors (below)"],
+  ["Training", "RLCD (Reinforcement Learning for Calibrated Decisions)", "RLCD, as described by Laya's authors (above)"],
   ["Stated speed", "70 to 500 ms per request", "About 33 ms per question on a T4 GPU"],
   ["Price", "$0.042 per million input tokens, output free", "Free; you pay for the hardware"],
 ];

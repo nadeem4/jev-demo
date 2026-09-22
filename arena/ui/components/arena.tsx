@@ -24,8 +24,9 @@ const BOARD_CLASS: Partial<Record<GameId, string>> = {
   snake: "aspect-square w-[min(42vw,260px)]",
 };
 
-function viewOf(p: Playback, started: boolean): PanelView {
-  return { startFrame: p.start?.frame ?? null, step: p.current, end: p.end, failed: p.failed, status: p.status, waiting: p.waiting, started };
+// A side counts as started once Play gave it a status; before that it shows Ready.
+function viewOf(p: Playback): PanelView {
+  return { startFrame: p.start?.frame ?? null, step: p.current, end: p.end, failed: p.failed, status: p.status, waiting: p.waiting, started: p.status !== "" };
 }
 
 export function Arena() {
@@ -36,7 +37,7 @@ export function Arena() {
   const [runsIndex, setRunsIndex] = useState<RunsIndex>({});
   const [speed, setSpeed] = useState(1);
   const [running, setRunning] = useState(false);
-  const [views, setViews] = useState<PanelView[]>(() => SIDES.map(() => viewOf(new Playback(), false)));
+  const [views, setViews] = useState<PanelView[]>(() => SIDES.map(() => viewOf(new Playback())));
 
   const info = GAMES[game];
   const playbacks = useRef<Playback[]>(SIDES.map(() => new Playback()));
@@ -64,7 +65,7 @@ export function Arena() {
       const key = pbs.map((p) => `${p.current?.t}|${p.end?.steps}|${p.failed}|${p.status}|${p.waiting}|${p.ready}`).join("/");
       if (key !== lastKey) {
         lastKey = key;
-        setViews(pbs.map((p) => viewOf(p, true)));
+        setViews(pbs.map((p) => viewOf(p)));
       }
       raf = requestAnimationFrame(loop);
     };
@@ -100,6 +101,7 @@ export function Arena() {
     setRunning(true);
     SIDES.forEach((i) => {
       const pb = playbacks.current[i];
+      pb.status = "Starting…";
       const agent = agents[i];
       if (source === "live") {
         const es = new EventSource(urls.live!(game, agent, seedToPlay));
