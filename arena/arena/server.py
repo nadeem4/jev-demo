@@ -1,6 +1,7 @@
-"""Local arena UI: watch two agents drive side by side, live or from recordings.
+"""Arena API for the UI in ui/: live episodes as server-sent events, and recordings.
 
-    uv run python -m arena.server        # then open http://localhost:8000
+    uv run python -m arena.server        # API on http://localhost:8000
+    cd ui && npm run dev                 # UI on http://localhost:3000
 """
 import argparse
 import json
@@ -13,8 +14,9 @@ from urllib.parse import parse_qs, urlparse
 from .highway.runner import run_episode
 from .record import make_agent
 
-WEB_DIR = Path(__file__).parent / "web"
 NAME = re.compile(r"^[\w-]+$")
+VIEWER_GONE = ConnectionError  # includes BrokenPipe, ConnectionReset and Windows ConnectionAborted
+UI_HINT = "This is the arena API. Start the UI with: cd ui && npm run dev, then open http://localhost:3000\n"
 
 
 def sse(event):
@@ -72,6 +74,7 @@ def make_server(port=8000, runs_dir="runs", get_agent=cached_agent):
         def _send(self, code, body, kind):
             data = body.encode() if isinstance(body, str) else body
             self.send_response(code)
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Type", kind)
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
@@ -81,7 +84,7 @@ def make_server(port=8000, runs_dir="runs", get_agent=cached_agent):
             url = urlparse(self.path)
             parts = [p for p in url.path.split("/") if p]
             if not parts:
-                return self._send(200, (WEB_DIR / "index.html").read_bytes(), "text/html; charset=utf-8")
+                return self._send(200, UI_HINT, "text/plain")
             if parts == ["api", "runs"]:
                 return self._send(200, json.dumps(list_runs(runs_dir)), "application/json")
             if len(parts) == 5 and parts[:2] == ["api", "runs"]:
@@ -101,6 +104,7 @@ def make_server(port=8000, runs_dir="runs", get_agent=cached_agent):
             if not NAME.match(agent) or not seed.isdigit():
                 return self._send(400, "Bad agent or seed", "text/plain")
             self.send_response(200)
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
             self.end_headers()
@@ -108,7 +112,7 @@ def make_server(port=8000, runs_dir="runs", get_agent=cached_agent):
                 for event in live_events(agent, int(seed), int(max_steps) if max_steps else None, get_agent):
                     self.wfile.write(sse(event).encode())
                     self.wfile.flush()
-            except (BrokenPipeError, ConnectionResetError):
+            except VIEWER_GONE:
                 pass  # viewer closed the page
 
     return ThreadingHTTPServer(("127.0.0.1", port), Handler)
@@ -122,7 +126,8 @@ def main():
     server = make_server(args.port, args.runs)
     # Laya takes up to a minute to load; start now so it's ready by the first Play.
     threading.Thread(target=_preload, args=("laya",), daemon=True).start()
-    print(f"Arena running at http://localhost:{args.port}  (Ctrl+C to stop). Loading Laya in the background...")
+    print(f"Arena API on http://localhost:{args.port} (Ctrl+C to stop). Loading Laya in the background...")
+    print("Start the UI with: cd ui && npm run dev, then open http://localhost:3000")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

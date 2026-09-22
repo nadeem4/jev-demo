@@ -1,4 +1,18 @@
-from arena.agents import JevAgent, LayaAgent, ConstantAgent, RandomAgent
+from arena.agents import JevAgent, LayaAgent, ConstantAgent, RandomAgent, ensure_laya_weights
+
+
+def test_downloads_laya_weights_into_a_plain_folder_when_missing(tmp_path):
+    calls = []
+    target = tmp_path / "models" / "laya"
+    ensure_laya_weights(target, download=lambda **kw: calls.append(kw))
+    assert calls == [{"repo_id": "convaiinnovations/laya", "local_dir": str(target)}]
+
+
+def test_skips_the_download_when_weights_exist(tmp_path):
+    (tmp_path / "model.safetensors").write_text("x")
+    calls = []
+    ensure_laya_weights(tmp_path, download=lambda **kw: calls.append(kw))
+    assert calls == []
 
 QUESTIONS = {"action": {"type": "choice", "instructions": "Pick", "criteria": {"A": "a", "B": "b"}}}
 STATE = {"road": "clear"}

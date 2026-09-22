@@ -5,6 +5,7 @@ import random
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 GATEWAY_URL = "https://ai-gateway.vercel.sh/v4/ai/evaluation-model"
 
@@ -60,6 +61,23 @@ class JevAgent:
             return answers
 
 
+LAYA_REPO = "convaiinnovations/laya"
+
+
+def _hf_download(**kwargs):
+    from huggingface_hub import snapshot_download
+    return snapshot_download(**kwargs)
+
+
+def ensure_laya_weights(path, download=_hf_download):
+    """`pip install laya` ships code only; the 2.3 GB weights come from Hugging Face.
+    They go into a plain folder because Hugging Face's cache uses symlinks, which
+    fail on Windows without Developer Mode."""
+    path = Path(path)
+    if not (path / "model.safetensors").exists():
+        download(repo_id=LAYA_REPO, local_dir=str(path))
+
+
 class LayaAgent:
     """Open-source Laya, run locally. `model` is a loaded laya.Agent."""
     name = "laya"
@@ -69,6 +87,7 @@ class LayaAgent:
 
     @classmethod
     def load(cls, path="models/laya", subfolder=None):
+        ensure_laya_weights(path)
         import laya  # heavy import (torch); only needed when Laya actually runs
         return cls(laya.load(path, subfolder=subfolder) if subfolder else laya.load(path))
 

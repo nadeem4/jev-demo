@@ -26,28 +26,38 @@ flowchart LR
 
 ```
 uv sync
-uv run python -c "from huggingface_hub import snapshot_download; snapshot_download('convaiinnovations/laya', local_dir='models/laya')"
 ```
+
+`uv sync` installs the `laya` package, which is code only. Laya's weights (2.3 GB) download into `models/laya` the first time Laya runs.
 
 Jev looks for keys in the environment, then in the repo-root `.env`:
 
 - `TYPESAFE_API_KEY` is preferred. It calls `api.typesafe.ai/v1/systemone` directly with the pinned model `jev-1.13.0`, so runs are reproducible and there's no extra network hop. TypeSafe signups are currently paused.
 - `AI_GATEWAY_API_KEY` is the fallback, through Vercel AI Gateway (`typesafe-ai/jev`). The Gateway rate-limits often (HTTP 429), and the agent retries those with backoff.
 
-On Windows, Hugging Face's cache symlinks fail without Developer Mode, which is why Laya is downloaded to `models/laya`. PyTorch comes from the CUDA 12.6 index (`pyproject.toml`). If your NVIDIA driver is too old, Laya falls back to CPU at roughly 200–2000ms per decision, compared with about 33ms on a GPU.
+Weights go into a plain folder, not the Hugging Face cache, because the cache uses symlinks that fail on Windows without Developer Mode. PyTorch comes from the CUDA 12.6 index (`pyproject.toml`). If your NVIDIA driver is too old, Laya falls back to CPU at roughly 200–2000ms per decision, compared with about 33ms on a GPU.
 
 ## Watch them drive
 
+The UI is a Next.js app in `ui/`. It talks to the Python arena server, so run both, in two terminals:
+
 ```
-uv run python -m arena.server      # open http://localhost:8000
+uv run python -m arena.server              # API on http://localhost:8000
+cd ui && npm install && npm run dev        # UI on http://localhost:3000
 ```
 
-Pick a model for each road (Jev, Laya, keep-lane, random) and a traffic seed, then click **Play**. Both roads get identical traffic.
+Open http://localhost:3000, pick a model for each side and a traffic number, then click **Play**. Both roads get identical traffic.
 
 - **Live** runs both models right now. The server starts loading Laya when it launches, and both roads wait for each other so they start together.
 - **Recording** replays episodes from `runs/`, which is instant and needs no API calls.
 
-The overhead sign above each road shows the model's probability for each of the five moves, with the chosen move lit. Open "What the model was told" to see the text the model read at that step. The server (`arena/server.py`) uses only the standard library: server-sent events for live play and JSON files for recordings. The page is a single file, `arena/web/index.html`.
+The two roads sit in the middle, and each model's panel sits on its outer side:
+
+- **What it sees** is the exact text the model read at this step. Blocked lanes and very close cars are shown in red.
+- **What it decides** shows the model's probability for each of the five moves, with the chosen move highlighted.
+- **Warnings** appear under the decision when the move is impossible (a lane change into a lane that doesn't exist), goes into a blocked lane, or was made with under 50% confidence.
+
+The server (`arena/server.py`) uses only the Python standard library. Live play uses server-sent events and recordings are JSON files. The browser connects to it directly (it sends `Access-Control-Allow-Origin: *`) because a dev proxy breaks long event streams. Point the UI elsewhere with `NEXT_PUBLIC_ARENA_API`.
 
 ## Record episodes
 

@@ -8,3 +8,6 @@ runs/
 __pycache__/
 .remember/
 .pytest_cache/
+.next/
+next-env.d.ts
+*.tsbuildinfo

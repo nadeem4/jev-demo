@@ -52,15 +52,27 @@ def get(url):
         return r.headers.get_content_type(), r.read().decode()
 
 
-def test_serves_the_page(server):
+def test_root_points_to_the_ui(server):
     kind, body = get(server + "/")
-    assert kind == "text/html"
-    assert "<canvas" in body
+    assert kind == "text/plain"
+    assert "npm run dev" in body
 
 
 def test_serves_the_run_index_and_a_recording(server):
     assert json.loads(get(server + "/api/runs")[1]) == {"highway": {"jev": [0]}}
     assert json.loads(get(server + "/api/runs/highway/jev/0")[1]) == [{"type": "start"}]
+
+
+def test_allows_the_ui_on_another_port_to_connect(server):
+    with urllib.request.urlopen(server + "/api/runs", timeout=30) as r:
+        assert r.headers["Access-Control-Allow-Origin"] == "*"
+    with urllib.request.urlopen(server + "/api/live?agent=idle&seed=0&max_steps=1", timeout=30) as r:
+        assert r.headers["Access-Control-Allow-Origin"] == "*"
+
+
+def test_viewer_disconnects_are_treated_as_normal():
+    from arena.server import VIEWER_GONE
+    assert issubclass(ConnectionAbortedError, VIEWER_GONE)
 
 
 def test_rejects_paths_outside_the_runs_folder(server):

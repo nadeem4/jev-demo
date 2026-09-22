@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/* One accent (sign green). Road colours are domain colours: yellow = the model's car, red = crash or danger. */
+:root {
+  --page: #E4E6E1;
+  --surface: #F1F2EF;
+  --line: #C4C8C0;
+  --ink: #1C1F20;
+  --ink-soft: #545A5B;
+  --accent: #00674A;
+  --accent-ink: #F3F6F4;
+  --asphalt: #2B2E30;
+  --marking: #F2C230;
+  --danger: #C8322A;
+  --clear: #1E7A57;
+  --traffic: #C9CDC6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #16191A;
+    --surface: #1E2223;
+    --line: #343A3B;
+    --ink: #E5E8E3;
+    --ink-soft: #9AA19D;
+    --accent: #2F9E76;
+    --accent-ink: #0F1413;
+    --asphalt: #262A2C;
+    --danger: #EE5B51;
+    --clear: #5CC499;
+  }
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --color-clear: var(--clear);
+  --color-marking: var(--marking);
+  --font-sans: var(--font-overpass), system-ui, sans-serif;
+}
+
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
