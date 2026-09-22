@@ -1,0 +1,37 @@
+[project]
+name = "arena"
+version = "0.1.0"
+description = "Benchmark where decision models (Jev, Laya) play RL environments with zero training"
+authors = [
+    { name = "Nadeem Khan", email = "nadeem4.nk13@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "highway-env>=1.12.1",
+    "laya>=0.3.5",
+    "torch>=2.14.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu126" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

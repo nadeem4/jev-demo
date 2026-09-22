@@ -1,0 +1,10 @@
+.env
+node_modules/
+.playwright-mcp/
+.watchdog/
+models/
+runs/
+.venv/
+__pycache__/
+.remember/
+.pytest_cache/

@@ -1,0 +1,6 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "node \"C:/projects/jev_demo/agent-watchdog/bin/hook.mjs\"" }] }],
+    "PreToolUse": [{ "matcher": "Bash|PowerShell|Write|Edit", "hooks": [{ "type": "command", "command": "node \"C:/projects/jev_demo/agent-watchdog/bin/hook.mjs\"" }] }]
+  }
+}
