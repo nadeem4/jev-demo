@@ -103,6 +103,7 @@ def aggregate(episodes, reference=None):
         "decisions": {
             "count": len(steps),
             "failed": sum("error" in s for s in steps),
+            "late": sum("late" in s for s in steps),
             "retries": sum(s.get("retries", 0) for s in steps),
             "latency_p50_ms": _r(statistics.median(latencies), 1) if latencies else None,
             "latency_p95_ms": _r(statistics.quantiles(latencies, n=20)[18], 1) if len(latencies) >= 2 else None,
@@ -141,13 +142,13 @@ def _model_info(names, laya_checkpoint):
     return info
 
 
-def run_benchmark(game, names, seeds, out_dir, max_steps=None, make=None, laya_checkpoint=None, log=lambda *_: None, fresh=False):
+def run_benchmark(game, names, seeds, out_dir, max_steps=None, make=None, laya_checkpoint=None, log=lambda *_: None, fresh=False, deadline_ms=None):
     """Episodes already saved in runs/ are reused unless fresh=True, so a stopped
     run resumes where it left off. Results are rewritten after every agent."""
     out_dir = Path(out_dir)
     make = make or (lambda name, g, seed: make_agent(name, g, seed, laya_checkpoint))
     started = datetime.now(timezone.utc)
-    results = {"game": game, "seeds": list(seeds), "max_steps": max_steps, "started": started.isoformat(timespec="seconds"),
+    results = {"game": game, "seeds": list(seeds), "max_steps": max_steps, "deadline_ms": deadline_ms, "started": started.isoformat(timespec="seconds"),
                "commit": _git_commit(), "models": _model_info(names, laya_checkpoint), "agents": {}}
     results_path = out_dir / "results" / game / f"{started.strftime('%Y%m%d-%H%M%S')}.json"
 
@@ -165,7 +166,7 @@ def run_benchmark(game, names, seeds, out_dir, max_steps=None, make=None, laya_c
                     agent = cached
                 else:
                     agent = make(name, game, seed)  # baselines are seeded per episode
-                events = list(run_episode(game, agent, seed=seed, max_steps=max_steps))
+                events = list(run_episode(game, agent, seed=seed, max_steps=max_steps, deadline_ms=deadline_ms))
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(json.dumps(events))
                 log(f"{game} {name} seed {seed}: {events[-1]}")
@@ -179,7 +180,7 @@ def run_benchmark(game, names, seeds, out_dir, max_steps=None, make=None, laya_c
     return results
 
 
-def _table(results):
+def format_table(results):
     rows = []
     for name, s in results["agents"].items():
         m, d = s["metrics"], s["decisions"]
@@ -205,12 +206,13 @@ def main():
     p.add_argument("--out", default=".")
     p.add_argument("--laya-checkpoint", default="multilingual")
     p.add_argument("--fresh", action="store_true", help="replay every episode instead of reusing saved ones")
+    p.add_argument("--deadline-ms", type=float, default=None, help="real-time round: answers slower than this are not used")
     args = p.parse_args()
 
     names = args.agents or agent_names(args.game)
     seeds = list(range(args.seed_start, args.seed_start + args.episodes))
-    results = run_benchmark(args.game, names, seeds, args.out, args.max_steps, laya_checkpoint=args.laya_checkpoint, log=print, fresh=args.fresh)
-    print(_table(results))
+    results = run_benchmark(args.game, names, seeds, args.out, args.max_steps, laya_checkpoint=args.laya_checkpoint, log=print, fresh=args.fresh, deadline_ms=args.deadline_ms)
+    print(format_table(results))
     print(f"Saved {results['path']}")
 
 

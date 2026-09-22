@@ -105,6 +105,17 @@ cd ui && npm run deploy          # build the static site and deploy it
 
 `npm run deploy` builds `out/` and copies the Vercel project link into it, because `next build` recreates that folder. The link lives in `ui/.vercel` and points at the project `decision-arena`. Vercel Authentication is off for this project, so the site is publicly readable. Keys, models and the arena server are never deployed.
 
+## Run it on a GPU (Colab)
+
+`notebooks/colab_benchmark.ipynb` runs what a laptop cannot: a fair speed test with Laya on a
+T4, 50 episodes per agent per game, and a real-time round where each decision has a deadline
+and late answers are not used (`--deadline-ms`, also available from the command line). It needs
+a GPU runtime, and a Colab secret `AI_GATEWAY_API_KEY` to include Jev. Results download as a zip
+to copy into `results/` and `runs/`, then publish with `arena.export` and `npm run deploy`.
+
+The notebook is generated: edit `notebooks/build_benchmark_notebook.py` and run it, so the cell
+sources stay reviewable in git.
+
 ## Record single episodes
 
 ```
