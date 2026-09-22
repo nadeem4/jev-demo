@@ -6,6 +6,7 @@ describe("makeUrls", () => {
     const u = makeUrls(false, "http://localhost:8000");
     expect(u.results).toBe("http://localhost:8000/api/results");
     expect(u.runsIndex).toBe("http://localhost:8000/api/runs");
+    expect(u.probes).toBe("http://localhost:8000/api/probes");
     expect(u.run("snake", "jev", 3)).toBe("http://localhost:8000/api/runs/snake/jev/3");
     expect(u.live!("snake", "jev", 3)).toBe("http://localhost:8000/api/live?game=snake&agent=jev&seed=3");
   });
@@ -14,6 +15,7 @@ describe("makeUrls", () => {
     const u = makeUrls(true, "http://localhost:8000");
     expect(u.results).toBe("/data/results.json");
     expect(u.runsIndex).toBe("/data/runs.json");
+    expect(u.probes).toBe("/data/probes.json");
     expect(u.run("snake", "jev", 3)).toBe("/data/runs/snake/jev/seed-3.json");
     expect(u.live).toBeNull();
   });

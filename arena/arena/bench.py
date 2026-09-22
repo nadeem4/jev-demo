@@ -16,7 +16,7 @@ from pathlib import Path
 
 from . import agents as agents_mod
 from .agents import MODELS, agent_names, make_agent
-from .games import GAME_NAMES
+from .games import GAME_NAMES, make_game
 from .runner import run_episode
 
 Z = 1.96  # 95%
@@ -48,7 +48,34 @@ def _r(x, digits=3):
     return None if x is None else round(x, digits)
 
 
-def aggregate(episodes):
+BINS = [(0.5, 0.6), (0.6, 0.7), (0.7, 0.8), (0.8, 0.9), (0.9, 1.01)]
+
+
+def _calibration(steps, reference):
+    """How often each decision matched the game's reference move, and whether the
+    stated confidence matched being right (a model saying 80% should be right ~80%)."""
+    graded = []
+    for s in steps:
+        if not s.get("answers"):
+            continue
+        best = reference(s["state"])
+        graded.append((s["answers"]["action"]["probabilities"].get(s["action"], 0.0), s["action"] == best))
+    if not graded:
+        return None
+    bins = []
+    for low, high in BINS:
+        chosen = [right for p, right in graded if low <= p < high]
+        if chosen:
+            bins.append({"said": f"{int(low * 100)}-{int(min(high, 1.0) * 100)}%",
+                         "right": _r(sum(chosen) / len(chosen)), "of": len(chosen)})
+    return {
+        "matches": _r(sum(right for _, right in graded) / len(graded)),
+        "confidence_gap": _r(statistics.fmean(abs(p - (1.0 if right else 0.0)) for p, right in graded)),
+        "bins": bins,
+    }
+
+
+def aggregate(episodes, reference=None):
     """Summarizes episodes (lists of events) for one agent."""
     ends = [ep[-1] for ep in episodes]
     metrics = {}
@@ -68,9 +95,11 @@ def aggregate(episodes):
     steps = [e for ep in episodes for e in ep if e["type"] == "step"]
     latencies = [s["latency_ms"] for s in steps]
     confidences = [s["answers"]["action"]["probabilities"].get(s["action"], 0.0) for s in steps if s.get("answers")]
+    calibration = _calibration(steps, reference) if reference else None
     return {
         "episodes": len(episodes),
         "metrics": metrics,
+        **({"reference": calibration} if calibration else {}),
         "decisions": {
             "count": len(steps),
             "failed": sum("error" in s for s in steps),
@@ -141,7 +170,7 @@ def run_benchmark(game, names, seeds, out_dir, max_steps=None, make=None, laya_c
                 path.write_text(json.dumps(events))
                 log(f"{game} {name} seed {seed}: {events[-1]}")
             episodes.append(events)
-        results["agents"][name] = aggregate(episodes)
+        results["agents"][name] = aggregate(episodes, getattr(make_game(game), "reference", None))
         results["finished"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
         results_path.parent.mkdir(parents=True, exist_ok=True)
         results_path.write_text(json.dumps(results, indent=2))

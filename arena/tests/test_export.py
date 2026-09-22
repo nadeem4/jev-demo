@@ -15,8 +15,11 @@ def test_exports_recordings_an_index_and_results_for_a_static_site(tmp_path):
     _write(src / "results" / "snake" / "20260101-000000.json", {"started": "old"})
     _write(src / "results" / "snake" / "20260202-000000.json", {"started": "new"})
 
+    _write(src / "results" / "probes" / "20260303-000000.json", {"agents": {"jev": {}}})
+
     export_site(src / "runs", src / "results", out)
 
+    assert json.loads((out / "probes.json").read_text()) == {"agents": {"jev": {}}}
     assert json.loads((out / "runs" / "snake" / "jev" / "seed-3.json").read_text()) == [{"type": "start"}]
     assert json.loads((out / "runs.json").read_text()) == {"snake": {"jev": [0, 3]}}
     assert [r["started"] for r in json.loads((out / "results.json").read_text())["snake"]] == ["new", "old"]
@@ -29,3 +32,4 @@ def test_replaces_a_previous_export(tmp_path):
     export_site(src / "runs", src / "results", out)
     assert not (out / "runs" / "gone").exists()
     assert json.loads((out / "results.json").read_text()) == {}
+    assert json.loads((out / "probes.json").read_text()) is None

@@ -124,3 +124,17 @@ def test_serves_benchmark_results_newest_first(tmp_path):
         assert [r["started"] for r in body["snake"]] == ["20260201-000000", "20260101-000000"]
     finally:
         srv.shutdown()
+
+
+def test_serves_the_latest_probe_run(tmp_path):
+    probes = tmp_path / "results" / "probes"
+    probes.mkdir(parents=True)
+    for name, agents in [("20260101-000000", ["old"]), ("20260202-000000", ["new"])]:
+        (probes / f"{name}.json").write_text(json.dumps({"agents": {a: {} for a in agents}}))
+    srv = make_server(port=0, runs_dir=tmp_path / "runs", results_dir=tmp_path / "results", get_agent=lambda *a: None)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        body = json.loads(get(f"http://127.0.0.1:{srv.server_address[1]}/api/probes")[1])
+        assert list(body["agents"]) == ["new"]
+    finally:
+        srv.shutdown()

@@ -116,3 +116,9 @@ def test_frame_has_what_the_ui_draws():
     assert f["size"] == 10
     assert f["snake"][0] == [5, 5]
     assert set(f) >= {"food", "heading", "dead"}
+
+
+def test_reference_is_the_greedy_move():
+    g = game()
+    put(g, [(5, 5), (5, 6), (5, 7)], "N", (8, 5))
+    assert SnakeGame.reference(g.describe()) == "TURN_RIGHT"

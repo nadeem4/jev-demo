@@ -128,11 +128,16 @@ class SnakeGame:
     def summary(self):
         return {"steps": self.steps, "died": self.dead, "food_eaten": self.food_eaten, "length": len(self.snake)}
 
+    @staticmethod
+    def reference(state):
+        """The greedy move: a sensible reference, not a proven optimum."""
+        return GreedySnake(0).decide(state, QUESTIONS)["action"]["choice"]
+
     def close(self):
         pass
 
 
-class GreedySnake:
+class GreedySnake:  # noqa: E302 (defined below SnakeGame, used by SnakeGame.reference at call time)
     """Baseline: moves closer to the food, never into an immediately blocked cell.
     Reads the same text the models read."""
     name = "greedy"

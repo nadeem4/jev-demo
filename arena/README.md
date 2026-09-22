@@ -82,6 +82,15 @@ Every agent plays the same seeds, so each faces the same traffic, food and cards
 - **Averages** (distance, food, match rate) come with a 95% **t-interval**.
 - **Decisions:** count, failed, rate-limit retries, latency (median and 95th percentile), and average confidence in the chosen move.
 - **Provenance:** seeds, start and finish times, git commit, the Jev route (TypeSafe or Gateway) and the Laya checkpoint and device.
+- **Against a reference, where the game has one:** how often each decision matched the best move (basic strategy for Blackjack, the greedy move for Snake), and whether the stated confidence matched being right.
+
+Sensitivity is measured separately, because it needs its own situations rather than played episodes:
+
+```
+uv run python -m arena.probe --agents jev laya
+```
+
+Each game defines pairs of opposite situations where the right answer clearly differs (8 versus 20 against the same dealer card; a car right in front versus an empty road). Sensitivity is how far the model's answer moves between them, from 0 (same answer to both) to 1 (completely different). A model that scores near 0 is not reading the situation. Results go to `results/probes/<timestamp>.json` and feed the Scorecard page.
 
 Terminology: an **episode** is one full game (a highway drive of up to 40 seconds, a snake game, or 20 blackjack hands) and a **step** is one decision. There are no **epochs**, because nothing is trained: both models are tested exactly as they ship. Sample size is episodes per agent. A handful gives very wide intervals, so treat anything under about 50 as a first look.
 
@@ -90,12 +99,11 @@ Terminology: an **episode** is one full game (a highway drive of up to 40 second
 Live at **https://decision-arena-nine.vercel.app** (recordings, results and Learn; live play stays local).
 
 ```
-uv run python -m arena.export        # refresh ui/public/data from runs/ and results/
-cd ui && npm run build:static        # static site in out/
-cd out && npx vercel deploy --prod   # deploy that folder
+uv run python -m arena.export    # refresh ui/public/data from runs/ and results/
+cd ui && npm run deploy          # build the static site and deploy it
 ```
 
-The `out/` folder is linked to the Vercel project `decision-arena`. Vercel Authentication is off for this project, so the site is publicly readable. Keys, models and the arena server are never deployed.
+`npm run deploy` builds `out/` and copies the Vercel project link into it, because `next build` recreates that folder. The link lives in `ui/.vercel` and points at the project `decision-arena`. Vercel Authentication is off for this project, so the site is publicly readable. Keys, models and the arena server are never deployed.
 
 ## Record single episodes
 

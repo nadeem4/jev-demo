@@ -11,12 +11,14 @@ export function makeUrls(isStatic: boolean, api: string) {
   return isStatic
     ? {
         results: "/data/results.json",
+        probes: "/data/probes.json",
         runsIndex: "/data/runs.json",
         run: (game: string, agent: string, seed: number) => `/data/runs/${game}/${agent}/seed-${seed}.json`,
         live: null,
       }
     : {
         results: `${api}/api/results`,
+        probes: `${api}/api/probes`,
         runsIndex: `${api}/api/runs`,
         run: (game: string, agent: string, seed: number) => `${api}/api/runs/${game}/${agent}/${seed}`,
         live: (game: string, agent: string, seed: number) => `${api}/api/live?game=${game}&agent=${agent}&seed=${seed}`,

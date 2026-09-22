@@ -37,6 +37,9 @@ def list_runs(runs_dir):
     }
 
 
+PROBES_DIR = "probes"  # sits next to the per-game result folders
+
+
 def list_results(results_dir):
     """Benchmark results per game, newest first (file names are timestamps)."""
     results_dir = Path(results_dir)
@@ -44,8 +47,14 @@ def list_results(results_dir):
         return {}
     return {
         game.name: [json.loads(f.read_text()) for f in sorted(game.glob("*.json"), reverse=True)]
-        for game in sorted(results_dir.iterdir()) if game.is_dir()
+        for game in sorted(results_dir.iterdir()) if game.is_dir() and game.name != PROBES_DIR
     }
+
+
+def latest_probe(results_dir):
+    """The newest sensitivity probe run, or None."""
+    files = sorted((Path(results_dir) / PROBES_DIR).glob("*.json"), reverse=True)
+    return json.loads(files[0].read_text()) if files else None
 
 
 def live_events(game, agent_name, seed, max_steps, get_agent):
@@ -100,6 +109,8 @@ def make_server(port=8000, runs_dir="runs", get_agent=cached_agent, host="127.0.
             parts = [p for p in url.path.split("/") if p]
             if not parts:
                 return self._send(200, UI_HINT, "text/plain")
+            if parts == ["api", "probes"]:
+                return self._send(200, json.dumps(latest_probe(results_dir)), "application/json")
             if parts == ["api", "results"]:
                 return self._send(200, json.dumps(list_results(results_dir)), "application/json")
             if parts == ["api", "runs"]:

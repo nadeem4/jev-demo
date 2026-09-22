@@ -120,7 +120,7 @@ export default function Page() {
           </table>
         </div>
         <p className="mt-4 max-w-[70ch] text-ink-soft">
-          Laya&apos;s README also compares accuracy and calibration against Jev and reports Laya ahead on most classification sets and Jev ahead on large option sets. Those are the Laya team&apos;s numbers, with Jev figures taken from third parties, so treat them as claims. The arena&apos;s <Link href="/results/" className="font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">Results</Link> are our own measurements.
+          Laya&apos;s README also compares accuracy and calibration against Jev and reports Laya ahead on most classification sets and Jev ahead on large option sets. Those are the Laya team&apos;s numbers, with Jev figures taken from third parties, so treat them as claims. The arena&apos;s <Link href="/results/" prefetch={false} className="font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">Results</Link> are our own measurements.
         </p>
       </section>
 

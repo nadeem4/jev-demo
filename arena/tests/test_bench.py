@@ -126,3 +126,22 @@ def test_reports_cpu_when_the_gpu_is_visible_but_unusable():
 def test_intervals_for_non_negative_metrics_do_not_go_below_zero():
     episodes = [[{"type": "start"}, {"type": "end", "steps": 1, "food_eaten": v}] for v in [0, 0, 0, 9]]
     assert aggregate(episodes)["metrics"]["food_eaten"]["ci95"][0] == 0.0
+
+
+def _graded(action, prob):
+    return {"type": "step", "state": {"x": "1"}, "action": action, "latency_ms": 1,
+            "answers": {"action": {"probabilities": {action: prob, "other": 1 - prob}}}}
+
+
+def test_scores_decisions_against_the_game_reference_when_it_has_one():
+    episodes = [[{"type": "start"}, _graded("good", 0.9), _graded("bad", 0.8), {"type": "end", "steps": 2}]]
+    s = aggregate(episodes, reference=lambda state: "good")
+    assert s["reference"]["matches"] == 0.5
+    # said 90% and was right, said 80% and was wrong: average gap = (0.1 + 0.8) / 2
+    assert s["reference"]["confidence_gap"] == pytest.approx(0.45, abs=0.001)
+    assert s["reference"]["bins"] == [{"said": "80-90%", "right": 0.0, "of": 1}, {"said": "90-100%", "right": 1.0, "of": 1}]
+
+
+def test_leaves_the_reference_out_when_the_game_has_none():
+    episodes = [[{"type": "start"}, _graded("a", 0.9), {"type": "end", "steps": 1}]]
+    assert "reference" not in aggregate(episodes)

@@ -3,14 +3,15 @@
     uv run python -m arena.export          # writes ui/public/data/
 
 The site then replays recordings and shows results without the arena server.
-Files mirror the API: runs.json (index), results.json, runs/<game>/<agent>/seed-N.json.
+Files mirror the API: runs.json (index), results.json, probes.json,
+runs/<game>/<agent>/seed-N.json.
 """
 import argparse
 import json
 import shutil
 from pathlib import Path
 
-from .server import list_results, list_runs
+from .server import latest_probe, list_results, list_runs
 
 
 def export_site(runs_dir, results_dir, out_dir):
@@ -22,6 +23,7 @@ def export_site(runs_dir, results_dir, out_dir):
         shutil.copytree(runs_dir, out_dir / "runs")
     (out_dir / "runs.json").write_text(json.dumps(list_runs(runs_dir)))
     (out_dir / "results.json").write_text(json.dumps(list_results(results_dir)))
+    (out_dir / "probes.json").write_text(json.dumps(latest_probe(results_dir)))
 
 
 def main():

@@ -103,6 +103,13 @@ class BlackjackGame:
                 "net": self.net, "return_per_hand": round(self.net / self.hands, 3) if self.hands else 0.0,
                 "basic_strategy_match": round(self.matches / self.steps, 3) if self.steps else 0.0}
 
+    @staticmethod
+    def reference(state):
+        """The optimal move for this hand, used to score decisions and calibration."""
+        total = int(re.match(r"(\d+)", state["your_hand"])[1])
+        up = state["dealer_shows"].split()[-1]
+        return basic_strategy(total, 1 if up == "ace" else int(up), state["your_hand"].split("(")[1].startswith("soft"))
+
     def close(self):
         self.env.close()
 

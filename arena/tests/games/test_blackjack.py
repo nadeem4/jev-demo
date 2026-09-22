@@ -110,3 +110,9 @@ def test_frame_shows_what_basic_strategy_advised_for_the_last_decision():
     deal(g, [10, 6], [10, 7])
     g.step("STICK")
     assert g.frame()["advice"] == "HIT"
+
+
+def test_reference_reads_the_state_text_like_an_agent_does():
+    g = game()
+    deal(g, [10, 6], [10, 7])
+    assert BlackjackGame.reference(g.describe()) == "HIT"
