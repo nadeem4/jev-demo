@@ -24,21 +24,15 @@ The Vercel account needs a credit card on file before AI Gateway will serve requ
 
 ### Arena: watch Jev and Laya drive
 
-Needs [uv](https://docs.astral.sh/uv/) and Node.js 22+. The first time Laya runs, it downloads its model (about 2.3 GB). Use two terminals:
+With [Docker](https://www.docker.com/products/docker-desktop/), from this folder:
 
 ```
-# terminal 1: the arena server (runs the models)
-cd arena
-uv sync
-uv run python -m arena.server
-
-# terminal 2: the UI
-cd arena/ui
-npm install
-npm run dev
+docker compose up --build
 ```
 
-Open http://localhost:3000, choose a model for each side and a traffic number, and click **Play**. To record episodes, run tests, or learn how it works, see [arena/README.md](arena/README.md).
+Open http://localhost:3000, choose a model for each side and a traffic number, and click **Play**. The first start downloads Laya's model (about 2.3 GB) into a Docker volume. Stop everything with `docker compose down`.
+
+To run without Docker (needs uv and Node.js 22+), or to record episodes, run tests, or learn how it works, see [arena/README.md](arena/README.md).
 
 ### Agent watchdog
 

@@ -1,7 +1,7 @@
 """Arena API for the UI in ui/: live episodes as server-sent events, and recordings.
 
-    uv run python -m arena.server        # API on http://localhost:8000
-    cd ui && npm run dev                 # UI on http://localhost:3000
+    docker compose up --build            # from the repo root: API and UI together
+    uv run python -m arena.server        # or just the API, on http://localhost:8000
 """
 import argparse
 import json
@@ -12,11 +12,11 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .highway.runner import run_episode
-from .record import make_agent
+from .agents import make_agent
 
 NAME = re.compile(r"^[\w-]+$")
 VIEWER_GONE = ConnectionError  # includes BrokenPipe, ConnectionReset and Windows ConnectionAborted
-UI_HINT = "This is the arena API. Start the UI with: cd ui && npm run dev, then open http://localhost:3000\n"
+UI_HINT = "This is the arena API. The UI is on http://localhost:3000 (docker compose up, or npm run dev in ui/).\n"
 
 
 def sse(event):
@@ -64,7 +64,7 @@ def _preload(name):
         print(f"Could not preload {name}: {e}")
 
 
-def make_server(port=8000, runs_dir="runs", get_agent=cached_agent):
+def make_server(port=8000, runs_dir="runs", get_agent=cached_agent, host="127.0.0.1"):
     runs_dir = Path(runs_dir)
 
     class Handler(BaseHTTPRequestHandler):
@@ -115,19 +115,20 @@ def make_server(port=8000, runs_dir="runs", get_agent=cached_agent):
             except VIEWER_GONE:
                 pass  # viewer closed the page
 
-    return ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    return ThreadingHTTPServer((host, port), Handler)
 
 
 def main():
-    p = argparse.ArgumentParser(description="Serve the arena UI.")
+    p = argparse.ArgumentParser(description="Serve the arena API for the UI.")
+    p.add_argument("--host", default="127.0.0.1", help="0.0.0.0 inside a container")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--runs", default="runs")
     args = p.parse_args()
-    server = make_server(args.port, args.runs)
+    server = make_server(args.port, args.runs, host=args.host)
     # Laya takes up to a minute to load; start now so it's ready by the first Play.
     threading.Thread(target=_preload, args=("laya",), daemon=True).start()
     print(f"Arena API on http://localhost:{args.port} (Ctrl+C to stop). Loading Laya in the background...")
-    print("Start the UI with: cd ui && npm run dev, then open http://localhost:3000")
+    print("The UI is on http://localhost:3000 (docker compose up, or npm run dev in ui/)")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

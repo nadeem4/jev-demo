@@ -1,0 +1,23 @@
+# One command for the whole arena:  docker compose up --build
+# Then open http://localhost:3000. API keys come from .env in this folder.
+services:
+  arena-api:
+    build: ./arena
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - laya-models:/models          # Laya's 2.3 GB weights, downloaded once
+      - ./arena/runs:/app/runs       # recordings, shared with the host
+    ports:
+      - "8000:8000"
+
+  arena-ui:
+    build: ./arena/ui
+    ports:
+      - "3000:80"
+    depends_on:
+      - arena-api
+
+volumes:
+  laya-models:

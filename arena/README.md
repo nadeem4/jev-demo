@@ -15,14 +15,30 @@ flowchart LR
 ```
 
 - **`arena/highway/describe.py`** turns the road into words ("car close ahead (12 m), 4 m/s slower than you", "BLOCKED: car right beside you"). Decision models read meaning and can't do arithmetic, so raw coordinates are never sent.
-- **`arena/agents.py`** gives every agent the same interface, `decide(state, questions) -> answers`:
-  - `JevAgent` calls TypeSafe directly or through Vercel AI Gateway, over HTTP. It retries 429 and 529 responses with backoff, and reports only the successful attempt's latency.
-  - `LayaAgent` runs the model locally.
-  - `ConstantAgent` and `RandomAgent` are baselines.
+- **`arena/agents/`** holds one file per model. Every agent has the same interface, `decide(state, questions) -> answers`:
+  - `jev.py`: everything Jev-specific. It calls TypeSafe directly or through Vercel AI Gateway over HTTP, picks the key with `from_env()`, retries 429 and 529 responses with backoff, and reports only the successful attempt's latency.
+  - `laya.py`: everything Laya-specific. It downloads the weights on first use (`ensure_weights`), chooses the checkpoint, and runs the model locally.
+  - `baselines.py`: the keep-lane and random drivers.
+  - `__init__.py`: `make_agent(name)` is the only place an agent is chosen by name.
 - **`arena/highway/runner.py`** yields a `start` event, one `step` event per decision (frame, state, answers, action, latency), then an `end` event. The same stream serves as a recording and, later, as a live feed. A failed decision falls back to `IDLE` and is recorded with an `error` field.
 - **`arena/record.py`** saves episodes to `runs/<game>/<agent>/seed-<n>.json` and prints a summary: crash rate, distance, reward, speed, and median latency.
 
-## Setup
+## Run it with Docker (one command)
+
+From the repo root:
+
+```
+docker compose up --build
+```
+
+Open http://localhost:3000. `compose.yaml` starts two containers:
+
+- `arena-api` (port 8000) is this Python package. It runs PyTorch on CPU, since GPU containers need a newer NVIDIA driver, and the image is about 2 GB. Laya's weights download into the `laya-models` volume on first start, so they survive rebuilds. `runs/` is shared with your machine.
+- `arena-ui` (port 3000) is `ui/`, built to static files and served by nginx. The image is about 94 MB.
+
+API keys come from the repo-root `.env`. Stop everything with `docker compose down`. The API uses about 1.7 GB of memory once Laya is loaded.
+
+## Setup (without Docker)
 
 ```
 uv sync
@@ -35,11 +51,11 @@ Jev looks for keys in the environment, then in the repo-root `.env`:
 - `TYPESAFE_API_KEY` is preferred. It calls `api.typesafe.ai/v1/systemone` directly with the pinned model `jev-1.13.0`, so runs are reproducible and there's no extra network hop. TypeSafe signups are currently paused.
 - `AI_GATEWAY_API_KEY` is the fallback, through Vercel AI Gateway (`typesafe-ai/jev`). The Gateway rate-limits often (HTTP 429), and the agent retries those with backoff.
 
-Weights go into a plain folder, not the Hugging Face cache, because the cache uses symlinks that fail on Windows without Developer Mode. PyTorch comes from the CUDA 12.6 index (`pyproject.toml`). If your NVIDIA driver is too old, Laya falls back to CPU at roughly 200–2000ms per decision, compared with about 33ms on a GPU.
+Weights go into a plain folder, not the Hugging Face cache, because the cache uses symlinks that fail on Windows without Developer Mode. Locally, PyTorch comes from the CUDA 12.6 index (`pyproject.toml`). Set `LAYA_PATH` to keep the weights somewhere other than `models/laya`. If your NVIDIA driver is too old, Laya falls back to CPU at roughly 200–2000ms per decision, compared with about 33ms on a GPU.
 
 ## Watch them drive
 
-The UI is a Next.js app in `ui/`. It talks to the Python arena server, so run both, in two terminals:
+With Docker, `docker compose up` is all you need. Without Docker, run the API and the UI in two terminals:
 
 ```
 uv run python -m arena.server              # API on http://localhost:8000

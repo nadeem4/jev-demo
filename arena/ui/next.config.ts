@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {};
+// The arena UI is fully client-side, so it builds to static files in out/:
+// served by nginx in Docker, and hostable on any static host (e.g. Vercel) later.
+const nextConfig: NextConfig = {
+  output: "export",
+};
 
 export default nextConfig;

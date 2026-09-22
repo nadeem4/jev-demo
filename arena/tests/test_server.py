@@ -55,7 +55,7 @@ def get(url):
 def test_root_points_to_the_ui(server):
     kind, body = get(server + "/")
     assert kind == "text/plain"
-    assert "npm run dev" in body
+    assert "localhost:3000" in body
 
 
 def test_serves_the_run_index_and_a_recording(server):
@@ -68,6 +68,18 @@ def test_allows_the_ui_on_another_port_to_connect(server):
         assert r.headers["Access-Control-Allow-Origin"] == "*"
     with urllib.request.urlopen(server + "/api/live?agent=idle&seed=0&max_steps=1", timeout=30) as r:
         assert r.headers["Access-Control-Allow-Origin"] == "*"
+
+
+def test_listens_only_on_this_machine_by_default():
+    srv = make_server(port=0)
+    assert srv.server_address[0] == "127.0.0.1"
+    srv.server_close()
+
+
+def test_can_listen_on_all_interfaces_inside_a_container():
+    srv = make_server(port=0, host="0.0.0.0")
+    assert srv.server_address[0] == "0.0.0.0"
+    srv.server_close()
 
 
 def test_viewer_disconnects_are_treated_as_normal():
