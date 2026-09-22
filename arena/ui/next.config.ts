@@ -4,6 +4,7 @@ import type { NextConfig } from "next";
 // served by nginx in Docker, and hostable on any static host (e.g. Vercel) later.
 const nextConfig: NextConfig = {
   output: "export",
+  trailingSlash: true, // /results/ -> results/index.html, which any static server can serve
 };
 
 export default nextConfig;

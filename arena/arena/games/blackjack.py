@@ -60,7 +60,7 @@ class BlackjackGame:
         self.env.reset(seed=seed)  # later hands continue the same seeded deck
         self.steps = self.hands = self.wins = self.losses = self.draws = self.matches = 0
         self.net = 0.0
-        self.last_hand = None
+        self.last_hand = self.advice = None
 
     def _hand(self):
         u = self.env.unwrapped
@@ -73,7 +73,8 @@ class BlackjackGame:
 
     def step(self, action):
         total, dealer, soft = self._hand()
-        self.matches += action == basic_strategy(total, dealer, soft)
+        self.advice = basic_strategy(total, dealer, soft)
+        self.matches += action == self.advice
         self.steps += 1
         _, reward, terminated, _, _ = self.env.step(ACTIONS.index(action))
         if not terminated:
@@ -93,7 +94,7 @@ class BlackjackGame:
 
     def frame(self):
         u = self.env.unwrapped
-        return {"player": list(u.player), "dealer_up": u.dealer[0], "last_hand": self.last_hand,
+        return {"player": list(u.player), "dealer_up": u.dealer[0], "last_hand": self.last_hand, "advice": self.advice,
                 "hands": self.hands, "of": self.n_hands, "wins": self.wins, "losses": self.losses,
                 "draws": self.draws, "net": self.net}
 

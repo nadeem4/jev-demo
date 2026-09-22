@@ -1,21 +1,10 @@
 "use client";
 
-import {
-  ArrowBendUpLeft, ArrowBendUpRight, ArrowUp, CaretDoubleDown, CaretDoubleUp, WarningCircle,
-  type Icon,
-} from "@phosphor-icons/react";
+import { WarningCircle } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
-import { ACTIONS, AGENTS, STATE_LABELS, type AgentId } from "@/lib/agents";
+import { GAMES, type AgentInfo } from "@/lib/games";
 import { concerns, tone, type Tone } from "@/lib/insights";
-import type { Action, EndEvent, StepEvent } from "@/lib/types";
-
-const ICONS: Record<Action, Icon> = {
-  LANE_LEFT: ArrowBendUpLeft,
-  IDLE: ArrowUp,
-  LANE_RIGHT: ArrowBendUpRight,
-  FASTER: CaretDoubleUp,
-  SLOWER: CaretDoubleDown,
-};
+import type { AnyFrame, EndEvent, GameId, StepEvent } from "@/lib/types";
 
 const TONE_CLASS: Record<Tone, string> = {
   danger: "text-danger font-semibold",
@@ -24,10 +13,8 @@ const TONE_CLASS: Record<Tone, string> = {
   normal: "text-ink",
 };
 
-// Order the road description the way a driver scans it: ahead first, then the sides.
-const STATE_ORDER = ["ahead_in_your_lane", "left_lane", "right_lane", "your_lane", "your_speed"];
-
 export interface PanelView {
+  startFrame: AnyFrame | null;
   step: StepEvent | null;
   end: EndEvent | null;
   failed: string | null;
@@ -36,20 +23,20 @@ export interface PanelView {
   started: boolean;
 }
 
-export function ModelPanel({ agent, view, align }: { agent: AgentId; view: PanelView; align: "left" | "right" }) {
+export function ModelPanel({ game, agent, view, align }: { game: GameId; agent: AgentInfo; view: PanelView; align: "left" | "right" }) {
   const reduce = useReducedMotion();
+  const info = GAMES[game];
   const { step, end, failed } = view;
-  const meta = AGENTS[agent];
   const probs = step?.answers?.action?.probabilities ?? {};
-  const issues = step ? concerns(step.state, step.action, step.answers) : [];
+  const issues = step ? concerns(game, step.state, step.action, step.answers, step.frame) : [];
 
   return (
-    <section aria-label={`${meta.name}: what it sees and decides`} className={align === "right" ? "lg:text-right" : ""}>
+    <section aria-label={`${agent.name}: what it sees and decides`} className={align === "right" ? "lg:text-right" : ""}>
       <header className="pb-5">
-        <h2 className="text-4xl font-extrabold leading-none tracking-tight">{meta.name}</h2>
-        <p className="mt-2 text-sm text-ink-soft">{meta.about}</p>
+        <h2 className="text-4xl font-extrabold leading-none tracking-tight">{agent.name}</h2>
+        <p className="mt-2 text-sm text-ink-soft">{agent.about}</p>
         <p className="mt-3 min-h-6 text-base font-semibold" aria-live="polite">
-          <StatusLine view={view} name={meta.name} />
+          <StatusLine view={view} name={agent.name} />
         </p>
       </header>
 
@@ -57,16 +44,16 @@ export function ModelPanel({ agent, view, align }: { agent: AgentId; view: Panel
         <h3 className="text-lg font-extrabold">What it sees</h3>
         {step ? (
           <dl className="mt-3 grid gap-2">
-            {STATE_ORDER.filter((k) => step.state[k]).map((k) => (
+            {info.stateOrder.filter((k) => step.state[k]).map((k) => (
               <div key={k} className={`grid gap-0.5 ${align === "right" ? "lg:justify-items-end" : ""}`}>
-                <dt className="text-sm text-ink-soft">{STATE_LABELS[k] ?? k}</dt>
+                <dt className="text-sm text-ink-soft">{info.stateLabels[k] ?? k}</dt>
                 <dd className={`text-base leading-snug ${TONE_CLASS[tone(step.state[k])]}`}>{step.state[k]}</dd>
               </div>
             ))}
           </dl>
         ) : (
           <p className="mt-3 max-w-[40ch] text-ink-soft lg:inline-block">
-            {failed ?? "Press Play. Each second, the text this model reads about the road appears here."}
+            {failed ?? "Press Play. Before every decision, the text this model reads appears here."}
           </p>
         )}
       </div>
@@ -74,8 +61,7 @@ export function ModelPanel({ agent, view, align }: { agent: AgentId; view: Panel
       <div className="border-t border-line py-5">
         <h3 className="text-lg font-extrabold">What it decides</h3>
         <ol className="mt-3 grid gap-1.5">
-          {ACTIONS.map(({ id, label }) => {
-            const Icon = ICONS[id];
+          {info.options.map(({ id, label, icon: Icon }) => {
             const p = probs[id];
             const chosen = step?.action === id;
             return (
@@ -115,21 +101,30 @@ export function ModelPanel({ agent, view, align }: { agent: AgentId; view: Panel
         {step && (
           <p className="mt-4 text-sm text-ink-soft">
             Decision {step.t} took <span className="font-semibold text-ink">{Math.round(step.latency_ms)} ms</span>
-            {step.error && <span className="block text-danger">This decision failed ({step.error}), so the car kept its lane.</span>}
+            {step.error && <span className="block text-danger">This decision failed ({step.error}), so the game used its default move.</span>}
           </p>
         )}
-        {end && !end.crashed && <p className="mt-2 text-sm font-semibold text-clear">Made it through all {end.steps} seconds without a crash.</p>}
+        {end && <p className="mt-2 text-sm font-semibold"><EndLine game={game} end={end} /></p>}
       </div>
     </section>
   );
 }
 
+function EndLine({ game, end }: { game: GameId; end: EndEvent }) {
+  if (game === "highway") return end.crashed
+    ? <span className="text-danger">Crashed after {end.steps} seconds.</span>
+    : <span className="text-clear">Made it through all {end.steps} seconds without a crash.</span>;
+  if (game === "snake") return end.died
+    ? <span className="text-danger">Died after eating {String(end.food_eaten)}.</span>
+    : <span className="text-clear">Survived, ate {String(end.food_eaten)}. Ended for taking too long without food.</span>;
+  return <span>{String(end.wins)} won, {String(end.losses)} lost, {String(end.draws)} drawn. Matched basic strategy on {Math.round(Number(end.basic_strategy_match) * 100)}% of decisions.</span>;
+}
+
 function StatusLine({ view, name }: { view: PanelView; name: string }) {
   if (view.failed) return <span className="text-danger">Could not start</span>;
-  if (view.end?.crashed) return <span className="text-danger">Crashed after {view.end.steps} seconds</span>;
-  if (view.end) return <span className="text-clear">Finished</span>;
+  if (view.end) return <span>Finished</span>;
   if (view.waiting) return <span className="text-ink-soft">{name} is deciding…</span>;
-  if (view.step) return <span>Driving</span>;
+  if (view.step) return <span>Playing</span>;
   if (view.started) return <span className="text-ink-soft">{view.status || "Starting…"}</span>;
   return <span className="text-ink-soft">Ready</span>;
 }

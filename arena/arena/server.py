@@ -37,6 +37,17 @@ def list_runs(runs_dir):
     }
 
 
+def list_results(results_dir):
+    """Benchmark results per game, newest first (file names are timestamps)."""
+    results_dir = Path(results_dir)
+    if not results_dir.is_dir():
+        return {}
+    return {
+        game.name: [json.loads(f.read_text()) for f in sorted(game.glob("*.json"), reverse=True)]
+        for game in sorted(results_dir.iterdir()) if game.is_dir()
+    }
+
+
 def live_events(game, agent_name, seed, max_steps, get_agent):
     yield {"type": "status", "message": f"Starting {agent_name}"}
     try:
@@ -68,7 +79,7 @@ def _preload(name):
         print(f"Could not preload {name}: {e}")
 
 
-def make_server(port=8000, runs_dir="runs", get_agent=cached_agent, host="127.0.0.1"):
+def make_server(port=8000, runs_dir="runs", get_agent=cached_agent, host="127.0.0.1", results_dir="results"):
     runs_dir = Path(runs_dir)
 
     class Handler(BaseHTTPRequestHandler):
@@ -89,6 +100,8 @@ def make_server(port=8000, runs_dir="runs", get_agent=cached_agent, host="127.0.
             parts = [p for p in url.path.split("/") if p]
             if not parts:
                 return self._send(200, UI_HINT, "text/plain")
+            if parts == ["api", "results"]:
+                return self._send(200, json.dumps(list_results(results_dir)), "application/json")
             if parts == ["api", "runs"]:
                 return self._send(200, json.dumps(list_runs(runs_dir)), "application/json")
             if len(parts) == 5 and parts[:2] == ["api", "runs"]:
@@ -128,8 +141,9 @@ def main():
     p.add_argument("--host", default="127.0.0.1", help="0.0.0.0 inside a container")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--runs", default="runs")
+    p.add_argument("--results", default="results")
     args = p.parse_args()
-    server = make_server(args.port, args.runs, host=args.host)
+    server = make_server(args.port, args.runs, host=args.host, results_dir=args.results)
     # Laya takes up to a minute to load; start now so it's ready by the first Play.
     threading.Thread(target=_preload, args=("laya",), daemon=True).start()
     print(f"Arena API on http://localhost:{args.port} (Ctrl+C to stop). Loading Laya in the background...")

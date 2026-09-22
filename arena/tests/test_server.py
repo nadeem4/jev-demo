@@ -110,3 +110,17 @@ def test_rejects_unknown_games(server):
     with pytest.raises(urllib.error.HTTPError) as e:
         get(server + "/api/live?game=chess&agent=idle&seed=0")
     assert e.value.code == 400
+
+
+def test_serves_benchmark_results_newest_first(tmp_path):
+    runs, results = tmp_path / "runs", tmp_path / "results"
+    for name in ["20260101-000000", "20260201-000000"]:
+        (results / "snake").mkdir(parents=True, exist_ok=True)
+        (results / "snake" / f"{name}.json").write_text(json.dumps({"game": "snake", "started": name}))
+    srv = make_server(port=0, runs_dir=runs, results_dir=results, get_agent=lambda *a: None)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    try:
+        body = json.loads(get(f"http://127.0.0.1:{srv.server_address[1]}/api/results")[1])
+        assert [r["started"] for r in body["snake"]] == ["20260201-000000", "20260101-000000"]
+    finally:
+        srv.shutdown()

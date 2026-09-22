@@ -2,46 +2,63 @@
 
 import { Play } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { AGENTS, type AgentId } from "@/lib/agents";
 import { ARENA_API } from "@/lib/api";
-import { drawRoad } from "@/lib/draw";
-import { Playback } from "@/lib/playback";
-import type { ArenaEvent } from "@/lib/types";
+import { drawHighway } from "@/lib/draw/highway";
+import { drawSnake } from "@/lib/draw/snake";
+import { GAMES, GAME_IDS } from "@/lib/games";
+import { Playback, type FrameView } from "@/lib/playback";
+import type { ArenaEvent, GameId } from "@/lib/types";
+import { BlackjackBoard } from "./blackjack-board";
 import { ModelPanel, type PanelView } from "./model-panel";
 
 type Source = "live" | "recording";
 const SIDES = [0, 1] as const;
 
+// Canvas games draw every animation frame; Blackjack is plain markup that updates per decision.
+const DRAW: Partial<Record<GameId, (c: HTMLCanvasElement, v: FrameView | null, ended: boolean) => void>> = {
+  highway: drawHighway,
+  snake: (c, v) => drawSnake(c, v),
+};
+const BOARD_CLASS: Partial<Record<GameId, string>> = {
+  highway: "h-[min(620px,70dvh)] w-[140px] md:w-[160px]",
+  snake: "aspect-square w-[min(42vw,260px)]",
+};
+
 function viewOf(p: Playback, started: boolean): PanelView {
-  return { step: p.current, end: p.end, failed: p.failed, status: p.status, waiting: p.waiting, started };
+  return { startFrame: p.start?.frame ?? null, step: p.current, end: p.end, failed: p.failed, status: p.status, waiting: p.waiting, started };
 }
 
 export function Arena() {
-  const [agents, setAgents] = useState<[AgentId, AgentId]>(["jev", "laya"]);
+  const [game, setGame] = useState<GameId>("highway");
+  const [agents, setAgents] = useState<[string, string]>(["jev", "laya"]);
   const [seed, setSeed] = useState(4);
   const [source, setSource] = useState<Source>("live");
   const [speed, setSpeed] = useState(1);
   const [running, setRunning] = useState(false);
   const [views, setViews] = useState<PanelView[]>(() => SIDES.map(() => viewOf(new Playback(), false)));
 
+  const info = GAMES[game];
   const playbacks = useRef<Playback[]>(SIDES.map(() => new Playback()));
   const canvases = useRef<(HTMLCanvasElement | null)[]>([null, null]);
   const streams = useRef<EventSource[]>([]);
   const speedRef = useRef(speed);
+  const gameRef = useRef(game);
   useEffect(() => { speedRef.current = speed; }, [speed]);
+  useEffect(() => { gameRef.current = game; }, [game]);
 
-  // One animation loop for both roads. Playback holds until both roads have
-  // their first frame (or failed), so a slow-loading model doesn't start late.
+  // One animation loop for both sides. Playback holds until both sides have their
+  // first frame (or failed), so a slow-loading model doesn't start late.
   useEffect(() => {
     let raf = 0;
     let lastKey = "";
     const loop = (now: number) => {
       const pbs = playbacks.current;
       const go = pbs.every((p) => p.ready || p.failed);
+      const draw = DRAW[gameRef.current];
       pbs.forEach((p, i) => {
-        const frame = p.tick(now, 1000 / speedRef.current, go);
+        const view = p.tick(now, 1000 / speedRef.current, go);
         const canvas = canvases.current[i];
-        if (canvas) drawRoad(canvas, p.ready ? frame : null, Boolean(p.end?.crashed));
+        if (canvas && draw) draw(canvas, view, Boolean(p.end));
       });
       const key = pbs.map((p) => `${p.current?.t}|${p.end?.steps}|${p.failed}|${p.status}|${p.waiting}|${p.ready}`).join("/");
       if (key !== lastKey) {
@@ -56,61 +73,85 @@ export function Arena() {
 
   useEffect(() => () => streams.current.forEach((s) => s.close()), []);
 
-  async function play(e: React.FormEvent) {
-    e.preventDefault();
+  function reset() {
     streams.current.forEach((s) => s.close());
     streams.current = [];
     playbacks.current = SIDES.map(() => new Playback());
-    setRunning(true);
+    setRunning(false);
+  }
 
+  function pickGame(id: GameId) {
+    reset();
+    setGame(id);
+    setAgents(["jev", "laya"]);
+  }
+
+  function play(e: React.FormEvent) {
+    e.preventDefault();
+    reset();
+    setRunning(true);
     SIDES.forEach((i) => {
       const pb = playbacks.current[i];
       const agent = agents[i];
       if (source === "live") {
-        const es = new EventSource(`${ARENA_API}/api/live?agent=${agent}&seed=${seed}`);
+        const es = new EventSource(`${ARENA_API}/api/live?game=${game}&agent=${agent}&seed=${seed}`);
         es.onmessage = (m) => {
           const ev = JSON.parse(m.data) as ArenaEvent;
           pb.push(ev);
           if (ev.type === "end" || ev.type === "error") es.close();
         };
         es.onerror = () => {
-          if (!pb.end) pb.push({ type: "error", message: "Lost the connection to the arena server. Start it with: uv run python -m arena.server" });
+          if (!pb.end) pb.push({ type: "error", message: "Lost the connection to the arena server. Start it with docker compose up, or uv run python -m arena.server." });
           es.close();
         };
         streams.current.push(es);
       } else {
-        fetch(`${ARENA_API}/api/runs/highway/${agent}/${seed}`)
+        fetch(`${ARENA_API}/api/runs/${game}/${agent}/${seed}`)
           .then(async (r) => {
             if (!r.ok) throw new Error();
             (await r.json() as ArenaEvent[]).forEach((ev) => pb.push(ev));
           })
           .catch(() => pb.push({
             type: "error",
-            message: `No recording of ${AGENTS[agent].name} on traffic ${seed}. Record one with: uv run python -m arena.record --agent ${agent} --seed-start ${seed} --episodes 1`,
+            message: `No recording of ${info.agents.find((a) => a.id === agent)?.name} on ${info.name}, traffic ${seed}. Record one with: uv run python -m arena.record --game ${game} --agent ${agent} --seed-start ${seed} --episodes 1`,
           }));
       }
     });
   }
 
-  const setAgent = (i: 0 | 1, id: AgentId) => setAgents((a) => (i === 0 ? [id, a[1]] : [a[0], id]));
+  const setAgent = (i: 0 | 1, id: string) => setAgents((a) => (i === 0 ? [id, a[1]] : [a[0], id]));
+  const agentInfo = (id: string) => info.agents.find((a) => a.id === id) ?? info.agents[0];
 
   return (
     <main className="mx-auto max-w-[1400px] px-4 pb-16 pt-8 md:px-8">
-      <header className="max-w-[60ch]">
-        <h1 className="text-4xl font-extrabold leading-none tracking-tight md:text-5xl">Decision Arena</h1>
+      <header className="max-w-[62ch]">
+        <h1 className="text-4xl font-extrabold leading-none tracking-tight md:text-5xl">Watch them play</h1>
         <p className="mt-3 text-lg leading-relaxed text-ink-soft">
-          Two decision models drive identical traffic. Neither was trained to drive. Watch what each one reads and what it picks.
+          Two decision models play the same game with zero training. Watch what each one reads and what it picks.
         </p>
       </header>
 
-      <form onSubmit={play} className="mt-8 flex flex-wrap items-end gap-x-6 gap-y-4 border-y border-line py-5">
-        <Field label="Left model">
-          <AgentSelect value={agents[0]} onChange={(id) => setAgent(0, id)} />
-        </Field>
-        <Field label="Right model">
-          <AgentSelect value={agents[1]} onChange={(id) => setAgent(1, id)} />
-        </Field>
-        <Field label="Traffic">
+      <nav aria-label="Games" className="mt-8 flex flex-wrap gap-2">
+        {GAME_IDS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => pickGame(id)}
+            aria-pressed={game === id}
+            className={`h-11 rounded-md border-2 px-5 text-base font-extrabold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-marking ${
+              game === id ? "border-accent bg-accent text-accent-ink" : "border-line bg-surface text-ink hover:border-ink-soft"
+            }`}
+          >
+            {GAMES[id].name}
+          </button>
+        ))}
+      </nav>
+      <p className="mt-3 text-base text-ink-soft">{info.blurb}</p>
+
+      <form onSubmit={play} className="mt-5 flex flex-wrap items-end gap-x-6 gap-y-4 border-y border-line py-5">
+        <Field label="Left model"><AgentSelect agents={info.agents} value={agents[0]} onChange={(id) => setAgent(0, id)} /></Field>
+        <Field label="Right model"><AgentSelect agents={info.agents} value={agents[1]} onChange={(id) => setAgent(1, id)} /></Field>
+        <Field label={game === "blackjack" ? "Deck" : game === "snake" ? "Food layout" : "Traffic"}>
           <input
             type="number" min={0} step={1} value={seed}
             onChange={(e) => setSeed(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
@@ -134,10 +175,7 @@ export function Arena() {
           </div>
         </fieldset>
         <Field label="Playback">
-          <select
-            value={speed} onChange={(e) => setSpeed(Number(e.target.value))}
-            className="h-11 rounded-md border-2 border-line bg-surface px-3 text-base text-ink"
-          >
+          <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="h-11 rounded-md border-2 border-line bg-surface px-3 text-base text-ink">
             <option value={1}>Real time</option>
             <option value={2}>2x</option>
             <option value={4}>4x</option>
@@ -154,45 +192,41 @@ export function Arena() {
 
       <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-12">
         <div className="order-2 lg:order-1">
-          <ModelPanel agent={agents[0]} view={views[0]} align="left" />
+          <ModelPanel game={game} agent={agentInfo(agents[0])} view={views[0]} align="left" />
         </div>
 
         <div className="order-1 flex justify-center gap-4 lg:order-2">
           {SIDES.map((i) => (
-            <figure key={i} className="grid justify-items-center gap-2">
-              <figcaption className="text-base font-extrabold">{AGENTS[agents[i]].name}</figcaption>
-              <canvas
-                ref={(el) => { canvases.current[i] = el; }}
-                className="h-[min(620px,70dvh)] w-[140px] rounded-md md:w-[160px]"
-                role="img"
-                aria-label={`Road driven by ${AGENTS[agents[i]].name}. The yellow car is the model's car.`}
-              />
-              <RoadStats view={views[i]} />
+            <figure key={i} className="grid content-start justify-items-center gap-2">
+              <figcaption className="text-base font-extrabold">{agentInfo(agents[i]).name}</figcaption>
+              {DRAW[game] ? (
+                <canvas
+                  key={game}
+                  ref={(el) => { canvases.current[i] = el; }}
+                  className={`${BOARD_CLASS[game]} rounded-md`}
+                  role="img"
+                  aria-label={`${info.name} played by ${agentInfo(agents[i]).name}. Yellow is the model's ${game === "snake" ? "snake head" : "car"}.`}
+                />
+              ) : (
+                <BlackjackBoard step={views[i].step} start={views[i].startFrame} />
+              )}
+              <dl className="grid w-full grid-cols-2 gap-2 text-center">
+                {info.stats(views[i].step, views[i].end).map((s) => (
+                  <div key={s.label}>
+                    <dt className="text-xs text-ink-soft">{s.label}</dt>
+                    <dd className={`text-lg font-extrabold ${s.danger ? "text-danger" : ""}`}>{s.value}</dd>
+                  </div>
+                ))}
+              </dl>
             </figure>
           ))}
         </div>
 
         <div className="order-3">
-          <ModelPanel agent={agents[1]} view={views[1]} align="right" />
+          <ModelPanel game={game} agent={agentInfo(agents[1])} view={views[1]} align="right" />
         </div>
       </div>
     </main>
-  );
-}
-
-function RoadStats({ view }: { view: PanelView }) {
-  const frame = view.step?.frame;
-  return (
-    <dl className="grid w-full grid-cols-2 gap-2 text-center">
-      <div>
-        <dt className="text-xs text-ink-soft">Speed</dt>
-        <dd className="text-lg font-extrabold">{frame ? `${Math.round(frame.ego.speed)} m/s` : "-"}</dd>
-      </div>
-      <div>
-        <dt className="text-xs text-ink-soft">Time</dt>
-        <dd className={`text-lg font-extrabold ${view.end?.crashed ? "text-danger" : ""}`}>{view.step ? `${view.step.t} s` : "-"}</dd>
-      </div>
-    </dl>
   );
 }
 
@@ -205,16 +239,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AgentSelect({ value, onChange }: { value: AgentId; onChange: (id: AgentId) => void }) {
+function AgentSelect({ agents, value, onChange }: { agents: { id: string; name: string }[]; value: string; onChange: (id: string) => void }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value as AgentId)}
-      className="h-11 rounded-md border-2 border-line bg-surface px-3 text-base text-ink"
-    >
-      {(Object.keys(AGENTS) as AgentId[]).map((id) => (
-        <option key={id} value={id}>{AGENTS[id].name}</option>
-      ))}
+    <select value={value} onChange={(e) => onChange(e.target.value)} className="h-11 rounded-md border-2 border-line bg-surface px-3 text-base text-ink">
+      {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
     </select>
   );
 }

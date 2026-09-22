@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Overpass } from "next/font/google";
+import { SiteNav } from "@/components/site-nav";
 import "./globals.css";
 
 // Overpass is an open-source take on Highway Gothic, the lettering on US road signs.
@@ -7,13 +8,16 @@ const overpass = Overpass({ variable: "--font-overpass", subsets: ["latin"], wei
 
 export const metadata: Metadata = {
   title: "Decision Arena",
-  description: "Jev and Laya drive the same highway traffic side by side, with every input and decision visible.",
+  description: "Jev and Laya play the same games side by side, with every input and decision visible, plus benchmarks and how the models work.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${overpass.variable} antialiased`}>
-      <body className="min-h-[100dvh]">{children}</body>
+      <body className="min-h-[100dvh]">
+        <SiteNav />
+        {children}
+      </body>
     </html>
   );
 }

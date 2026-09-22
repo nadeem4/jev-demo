@@ -102,3 +102,11 @@ def test_frame_hides_the_dealer_hole_card_during_a_hand():
     assert f["player"] == [10, 6]
     assert f["dealer_up"] == 10
     assert "dealer" not in f
+
+
+def test_frame_shows_what_basic_strategy_advised_for_the_last_decision():
+    g = game()
+    assert g.frame()["advice"] is None
+    deal(g, [10, 6], [10, 7])
+    g.step("STICK")
+    assert g.frame()["advice"] == "HIT"

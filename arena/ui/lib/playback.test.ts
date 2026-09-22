@@ -3,9 +3,9 @@ import { Playback } from "./playback";
 import type { ArenaEvent, Frame } from "./types";
 
 const frame = (x: number): Frame => ({ ego: { x, y: 12, heading: 0, speed: 25, crashed: false }, others: [] });
-const start: ArenaEvent = { type: "start", game: "highway", agent: "jev", seed: 0, frame: frame(0) };
+const start: ArenaEvent = { type: "start", game: "highway", agent: "jev", seed: 0, options: ["IDLE"], frame: frame(0) };
 const step = (t: number): ArenaEvent => ({
-  type: "step", t, state: {}, answers: null, action: "IDLE", latency_ms: 300, reward: 1, frame: frame(t * 25),
+  type: "step", t, state: {}, answers: null, action: "IDLE", latency_ms: 300, frame: frame(t * 25),
 });
 
 describe("Playback", () => {
@@ -27,11 +27,18 @@ describe("Playback", () => {
     expect(p.current?.t).toBe(2);
   });
 
-  it("interpolates between the previous and next frame", () => {
+  it("reports the previous frame, the next frame, and progress between them", () => {
     const p = new Playback();
     [start, step(1)].forEach((e) => p.push(e));
     p.tick(0, 1000, true);
-    expect(p.tick(500, 1000, true).ego.x).toBeCloseTo(12.5);
+    const view = p.tick(500, 1000, true)!;
+    expect((view.prev as Frame).ego.x).toBe(0);
+    expect((view.next as Frame).ego.x).toBe(25);
+    expect(view.t).toBeCloseTo(0.5);
+  });
+
+  it("has nothing to draw before the start event", () => {
+    expect(new Playback().tick(0, 1000, true)).toBeNull();
   });
 
   it("waits for the model when no step is queued", () => {

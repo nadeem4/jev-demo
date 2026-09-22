@@ -1,11 +1,11 @@
-import type { ArenaEvent, Car, EndEvent, Frame, StartEvent, StepEvent } from "./types";
+import type { AnyFrame, ArenaEvent, EndEvent, StartEvent, StepEvent } from "./types";
 
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+export interface FrameView { prev: AnyFrame; next: AnyFrame; t: number }
 
 /**
- * Plays one road's event stream at a steady pace (one decision per step
- * duration), interpolating car positions between decisions. Events can
- * arrive faster (recordings) or slower (a model still thinking) than playback.
+ * Plays one side's event stream at a steady pace (one decision per step
+ * duration). Events can arrive faster (recordings) or slower (a model still
+ * thinking) than playback. Each game decides how to animate between frames.
  */
 export class Playback {
   start: StartEvent | null = null;
@@ -16,8 +16,8 @@ export class Playback {
   waiting = false;
 
   private queue: ArenaEvent[] = [];
-  private prev: Frame | null = null;
-  private next: Frame | null = null;
+  private prev: AnyFrame | null = null;
+  private next: AnyFrame | null = null;
   private stepStart = 0;
 
   get ready() {
@@ -37,11 +37,12 @@ export class Playback {
     }
   }
 
-  /** Advances playback and returns the interpolated ego car to draw. */
-  tick(now: number, stepMs: number, go: boolean): Frame & { ego: Car & { crashed: boolean } } {
-    if (!go || !this.next) {
+  /** Advances playback; returns the frames to draw, or null before the start. */
+  tick(now: number, stepMs: number, go: boolean): FrameView | null {
+    if (!this.prev || !this.next) return null;
+    if (!go) {
       this.stepStart = now;
-      return this.frameAt(0);
+      return { prev: this.prev, next: this.next, t: 0 };
     }
     const due = this.current === null || now - this.stepStart >= stepMs;
     if (due && this.queue.length) {
@@ -51,7 +52,7 @@ export class Playback {
         this.next = ev.frame;
         this.current = ev;
       } else if (ev.type === "end") {
-        this.end = ev;
+        this.end = ev as EndEvent;
         this.prev = this.next;
       }
       this.stepStart = now;
@@ -59,18 +60,6 @@ export class Playback {
     } else if (due && !this.end) {
       this.waiting = true;
     }
-    return this.frameAt(Math.min(1, (now - this.stepStart) / stepMs));
-  }
-
-  private frameAt(t: number): Frame {
-    const prev = this.prev!, next = this.next!;
-    if (!prev || !next) return { ego: { x: 0, y: 0, heading: 0, speed: 0, crashed: false }, others: [] };
-    const ego = { ...next.ego, x: lerp(prev.ego.x, next.ego.x, t), y: lerp(prev.ego.y, next.ego.y, t), heading: lerp(prev.ego.heading, next.ego.heading, t) };
-    // Frames list nearby cars in a stable order; match by index while they stay close.
-    const others = next.others.map((o, i) => {
-      const p = prev.others[i];
-      return p && Math.abs(p.x - o.x) < 60 ? { ...o, x: lerp(p.x, o.x, t), y: lerp(p.y, o.y, t) } : o;
-    });
-    return { ego, others };
+    return { prev: this.prev, next: this.next, t: Math.min(1, (now - this.stepStart) / stepMs) };
   }
 }
