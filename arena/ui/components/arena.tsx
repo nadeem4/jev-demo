@@ -2,7 +2,7 @@
 
 import { Play } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
-import { ARENA_API } from "@/lib/api";
+import { STATIC_SITE, commonSeeds, urls, type RunsIndex } from "@/lib/api";
 import { drawHighway } from "@/lib/draw/highway";
 import { drawSnake } from "@/lib/draw/snake";
 import { GAMES, GAME_IDS } from "@/lib/games";
@@ -32,7 +32,8 @@ export function Arena() {
   const [game, setGame] = useState<GameId>("highway");
   const [agents, setAgents] = useState<[string, string]>(["jev", "laya"]);
   const [seed, setSeed] = useState(4);
-  const [source, setSource] = useState<Source>("live");
+  const [source, setSource] = useState<Source>(STATIC_SITE ? "recording" : "live");
+  const [runsIndex, setRunsIndex] = useState<RunsIndex>({});
   const [speed, setSpeed] = useState(1);
   const [running, setRunning] = useState(false);
   const [views, setViews] = useState<PanelView[]>(() => SIDES.map(() => viewOf(new Playback(), false)));
@@ -73,6 +74,13 @@ export function Arena() {
 
   useEffect(() => () => streams.current.forEach((s) => s.close()), []);
 
+  // What has been recorded, so the published site only offers replays that exist.
+  useEffect(() => {
+    fetch(urls.runsIndex).then((r) => (r.ok ? r.json() : {})).then(setRunsIndex).catch(() => {});
+  }, []);
+  const recorded = commonSeeds(runsIndex, game, agents[0], agents[1]);
+  const seedToPlay = STATIC_SITE && !recorded.includes(seed) ? recorded[0] : seed;
+
   function reset() {
     streams.current.forEach((s) => s.close());
     streams.current = [];
@@ -94,7 +102,7 @@ export function Arena() {
       const pb = playbacks.current[i];
       const agent = agents[i];
       if (source === "live") {
-        const es = new EventSource(`${ARENA_API}/api/live?game=${game}&agent=${agent}&seed=${seed}`);
+        const es = new EventSource(urls.live!(game, agent, seedToPlay));
         es.onmessage = (m) => {
           const ev = JSON.parse(m.data) as ArenaEvent;
           pb.push(ev);
@@ -106,14 +114,16 @@ export function Arena() {
         };
         streams.current.push(es);
       } else {
-        fetch(`${ARENA_API}/api/runs/${game}/${agent}/${seed}`)
+        fetch(urls.run(game, agent, seedToPlay))
           .then(async (r) => {
             if (!r.ok) throw new Error();
             (await r.json() as ArenaEvent[]).forEach((ev) => pb.push(ev));
           })
           .catch(() => pb.push({
             type: "error",
-            message: `No recording of ${info.agents.find((a) => a.id === agent)?.name} on ${info.name}, traffic ${seed}. Record one with: uv run python -m arena.record --game ${game} --agent ${agent} --seed-start ${seed} --episodes 1`,
+            message: STATIC_SITE
+              ? `No recording of ${info.agents.find((a) => a.id === agent)?.name} on ${info.name} for this seed.`
+              : `No recording of ${info.agents.find((a) => a.id === agent)?.name} on ${info.name}, seed ${seedToPlay}. Record one with: uv run python -m arena.record --game ${game} --agent ${agent} --seed-start ${seedToPlay} --episodes 1`,
           }));
       }
     });
@@ -152,12 +162,27 @@ export function Arena() {
         <Field label="Left model"><AgentSelect agents={info.agents} value={agents[0]} onChange={(id) => setAgent(0, id)} /></Field>
         <Field label="Right model"><AgentSelect agents={info.agents} value={agents[1]} onChange={(id) => setAgent(1, id)} /></Field>
         <Field label={game === "blackjack" ? "Deck" : game === "snake" ? "Food layout" : "Traffic"}>
-          <input
-            type="number" min={0} step={1} value={seed}
-            onChange={(e) => setSeed(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-            className="h-11 w-24 rounded-md border-2 border-line bg-surface px-3 text-base text-ink"
-          />
+          {STATIC_SITE ? (
+            <select
+              value={seedToPlay ?? ""} disabled={!recorded.length}
+              onChange={(e) => setSeed(Number(e.target.value))}
+              className="h-11 rounded-md border-2 border-line bg-surface px-3 text-base text-ink disabled:text-ink-soft"
+            >
+              {recorded.length ? recorded.map((s) => <option key={s} value={s}>{s}</option>) : <option>None recorded</option>}
+            </select>
+          ) : (
+            <input
+              type="number" min={0} step={1} value={seed}
+              onChange={(e) => setSeed(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+              className="h-11 w-24 rounded-md border-2 border-line bg-surface px-3 text-base text-ink"
+            />
+          )}
         </Field>
+        {STATIC_SITE ? (
+          <p className="max-w-[34ch] self-center text-sm text-ink-soft">
+            These are recorded games. To watch the models play live, run the arena on your machine with <code className="font-semibold text-ink">docker compose up</code>.
+          </p>
+        ) : (
         <fieldset className="grid gap-1.5">
           <legend className="mb-1.5 text-sm text-ink-soft">Source</legend>
           <div className="flex h-11 rounded-md border-2 border-line bg-surface p-0.5">
@@ -174,6 +199,7 @@ export function Arena() {
             ))}
           </div>
         </fieldset>
+        )}
         <Field label="Playback">
           <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="h-11 rounded-md border-2 border-line bg-surface px-3 text-base text-ink">
             <option value={1}>Real time</option>
@@ -183,7 +209,8 @@ export function Arena() {
         </Field>
         <button
           type="submit"
-          className="flex h-11 items-center gap-2 rounded-md bg-accent px-6 text-base font-extrabold text-accent-ink transition-transform active:scale-[0.98] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-marking"
+          disabled={STATIC_SITE && !recorded.length}
+          className="flex h-11 disabled:opacity-50 items-center gap-2 rounded-md bg-accent px-6 text-base font-extrabold text-accent-ink transition-transform active:scale-[0.98] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-marking"
         >
           <Play size={18} weight="fill" aria-hidden />
           {running ? "Play again" : "Play"}

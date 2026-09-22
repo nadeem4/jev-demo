@@ -3,7 +3,8 @@
     uv run python -m arena.bench --game highway --agents jev laya idle random --episodes 20
 
 Each episode is also saved as a recording (runs/<game>/<agent>/seed-N.json) so it
-can be replayed in the UI. Results go to results/<game>/<timestamp>.json.
+can be replayed in the UI, and saved episodes are reused, so a stopped run resumes
+(--fresh replays everything). Results go to results/<game>/<timestamp>.json.
 """
 import argparse
 import json
@@ -97,35 +98,41 @@ def _model_info(names, laya_checkpoint):
     return info
 
 
-def run_benchmark(game, names, seeds, out_dir, max_steps=None, make=None, laya_checkpoint=None, log=lambda *_: None):
+def run_benchmark(game, names, seeds, out_dir, max_steps=None, make=None, laya_checkpoint=None, log=lambda *_: None, fresh=False):
+    """Episodes already saved in runs/ are reused unless fresh=True, so a stopped
+    run resumes where it left off. Results are rewritten after every agent."""
     out_dir = Path(out_dir)
     make = make or (lambda name, g, seed: make_agent(name, g, seed, laya_checkpoint))
     started = datetime.now(timezone.utc)
     results = {"game": game, "seeds": list(seeds), "max_steps": max_steps, "started": started.isoformat(timespec="seconds"),
                "commit": _git_commit(), "models": _model_info(names, laya_checkpoint), "agents": {}}
+    results_path = out_dir / "results" / game / f"{started.strftime('%Y%m%d-%H%M%S')}.json"
 
     for name in names:
         cached = None
         episodes = []
         for seed in seeds:
-            if name in MODELS:
-                cached = cached or make(name, game, seed)  # load Jev / Laya once
-                agent = cached
+            path = out_dir / "runs" / game / name / f"seed-{seed}.json"
+            if path.exists() and not fresh:
+                events = json.loads(path.read_text())
+                log(f"{game} {name} seed {seed}: reused saved episode")
             else:
-                agent = make(name, game, seed)  # baselines are seeded per episode
-            events = list(run_episode(game, agent, seed=seed, max_steps=max_steps))
-            path = out_dir / "runs" / game / agent.name / f"seed-{seed}.json"
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(events))
+                if name in MODELS:
+                    cached = cached or make(name, game, seed)  # load Jev / Laya once
+                    agent = cached
+                else:
+                    agent = make(name, game, seed)  # baselines are seeded per episode
+                events = list(run_episode(game, agent, seed=seed, max_steps=max_steps))
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps(events))
+                log(f"{game} {name} seed {seed}: {events[-1]}")
             episodes.append(events)
-            log(f"{game} {name} seed {seed}: {events[-1]}")
         results["agents"][name] = aggregate(episodes)
+        results["finished"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        results_path.parent.mkdir(parents=True, exist_ok=True)
+        results_path.write_text(json.dumps(results, indent=2))
 
-    results["finished"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    path = out_dir / "results" / game / f"{started.strftime('%Y%m%d-%H%M%S')}.json"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(results, indent=2))
-    results["path"] = path
+    results["path"] = results_path
     return results
 
 
@@ -154,11 +161,12 @@ def main():
     p.add_argument("--max-steps", type=int, default=None)
     p.add_argument("--out", default=".")
     p.add_argument("--laya-checkpoint", default="multilingual")
+    p.add_argument("--fresh", action="store_true", help="replay every episode instead of reusing saved ones")
     args = p.parse_args()
 
     names = args.agents or agent_names(args.game)
     seeds = list(range(args.seed_start, args.seed_start + args.episodes))
-    results = run_benchmark(args.game, names, seeds, args.out, args.max_steps, laya_checkpoint=args.laya_checkpoint, log=print)
+    results = run_benchmark(args.game, names, seeds, args.out, args.max_steps, laya_checkpoint=args.laya_checkpoint, log=print, fresh=args.fresh)
     print(_table(results))
     print(f"Saved {results['path']}")
 

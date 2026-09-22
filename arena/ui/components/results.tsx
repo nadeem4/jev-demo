@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ARENA_API } from "@/lib/api";
+import { STATIC_SITE, urls } from "@/lib/api";
 import { GAMES, GAME_IDS, agentName, type ResultMetric } from "@/lib/games";
 import type { GameId } from "@/lib/types";
 
@@ -38,7 +38,7 @@ export function Results() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch(`${ARENA_API}/api/results`).then((r) => r.json()).then(setRuns).catch(() => setError(true));
+    fetch(urls.results).then((r) => r.json()).then(setRuns).catch(() => setError(true));
   }, []);
 
   return (
@@ -48,7 +48,7 @@ export function Results() {
         Every agent plays the same seeds, so each faces the same traffic, food and cards. Ranges are 95% confidence intervals: with few episodes they are wide, and overlapping ranges mean the difference is not settled.
       </p>
 
-      {error && <p className="mt-8 font-semibold text-danger">Could not reach the arena server. Start it with docker compose up, or uv run python -m arena.server.</p>}
+      {error && <p className="mt-8 font-semibold text-danger">{STATIC_SITE ? "Could not load the results." : "Could not reach the arena server. Start it with docker compose up, or uv run python -m arena.server."}</p>}
       {runs && GAME_IDS.every((g) => !runs[g]?.length) && (
         <p className="mt-8 max-w-[64ch] text-ink-soft">
           No benchmark results yet. Run one with <code className="font-semibold text-ink">uv run python -m arena.bench --game highway --episodes 20</code> in the arena folder, then reload.

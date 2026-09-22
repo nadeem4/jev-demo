@@ -65,4 +65,37 @@ def test_runs_every_agent_on_the_same_seeds_and_saves_results(tmp_path):
     assert results["agents"]["idle"]["episodes"] == 2
     saved = json.loads(results["path"].read_text())
     assert saved["agents"]["idle"]["metrics"]["crashed"]["rate"] == 0.0
-    assert (tmp_path / "runs" / "highway" / "always-IDLE" / "seed-1.json").exists()
+    assert (tmp_path / "runs" / "highway" / "idle" / "seed-1.json").exists()  # saved under the name it was chosen by
+
+
+def test_resumes_from_saved_episodes_instead_of_replaying_them(tmp_path):
+    made = []
+    def make(name, game, seed):
+        made.append(seed)
+        return ConstantAgent("IDLE")
+    run_benchmark("highway", ["idle"], seeds=[0, 1], out_dir=tmp_path, max_steps=2, make=make)
+    made.clear()
+    results = run_benchmark("highway", ["idle"], seeds=[0, 1, 2], out_dir=tmp_path, max_steps=2, make=make)
+    assert made == [2]  # seeds 0 and 1 were already saved
+    assert results["agents"]["idle"]["episodes"] == 3
+
+
+def test_fresh_run_ignores_saved_episodes(tmp_path):
+    made = []
+    make = lambda name, game, seed: made.append(seed) or ConstantAgent("IDLE")
+    run_benchmark("highway", ["idle"], seeds=[0], out_dir=tmp_path, max_steps=2, make=make)
+    run_benchmark("highway", ["idle"], seeds=[0], out_dir=tmp_path, max_steps=2, make=make, fresh=True)
+    assert made == [0, 0]
+
+
+def test_writes_results_after_each_agent_so_a_stopped_run_keeps_them(tmp_path):
+    def make(name, game, seed):
+        if name == "random":
+            raise KeyboardInterrupt  # stopped during the second agent
+        return ConstantAgent("IDLE")
+    try:
+        run_benchmark("highway", ["idle", "random"], seeds=[0], out_dir=tmp_path, max_steps=2, make=make)
+    except KeyboardInterrupt:
+        pass
+    saved = [json.loads(f.read_text()) for f in (tmp_path / "results" / "highway").glob("*.json")]
+    assert len(saved) == 1 and list(saved[0]["agents"]) == ["idle"]
