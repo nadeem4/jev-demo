@@ -18,6 +18,19 @@ def test_jev_posts_state_and_questions_to_the_gateway():
     assert sent["body"] == {"state": STATE, "questions": QUESTIONS}
 
 
+def test_jev_can_call_typesafe_directly_with_a_pinned_model():
+    sent = {}
+    def post(url, headers, body):
+        sent.update(url=url, headers=headers, body=body)
+        return {"answers": {"ok": True}}
+    agent = JevAgent(api_key="ts", provider="typesafe", post=post)
+    assert agent.decide(STATE, QUESTIONS) == {"ok": True}
+    assert sent["url"] == "https://api.typesafe.ai/v1/systemone"
+    assert sent["headers"]["Authorization"] == "Bearer ts"
+    assert "ai-model-id" not in sent["headers"]
+    assert sent["body"] == {"model": "jev-1.13.0", "state": STATE, "questions": QUESTIONS}
+
+
 def _http_error(code):
     import urllib.error
     return urllib.error.HTTPError("u", code, "err", {}, None)

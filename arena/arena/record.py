@@ -4,6 +4,7 @@
 """
 import argparse
 import json
+import os
 import statistics
 from pathlib import Path
 
@@ -34,17 +35,19 @@ def summarize(ends, latencies):
     }
 
 
-def _api_key():
-    import os
-    if key := os.environ.get("AI_GATEWAY_API_KEY"):
+def _key(var):
+    """Reads a key from the environment, then from the repo-root .env."""
+    if key := os.environ.get(var):
         return key
-    line = next(l for l in ROOT_ENV.read_text().splitlines() if l.startswith("AI_GATEWAY_API_KEY"))
-    return line.split("=", 1)[1].strip()
+    lines = ROOT_ENV.read_text().splitlines() if ROOT_ENV.exists() else []
+    return next((l.split("=", 1)[1].strip() for l in lines if l.startswith(f"{var}=")), None)
 
 
 def make_agent(name, seed=0, laya_path="models/laya", laya_checkpoint=None):
     if name == "jev":
-        return JevAgent(api_key=_api_key())
+        if key := _key("TYPESAFE_API_KEY"):  # direct is preferred: pinned version, no extra hop
+            return JevAgent(api_key=key, provider="typesafe")
+        return JevAgent(api_key=_key("AI_GATEWAY_API_KEY"), provider="gateway")
     if name == "laya":
         return LayaAgent.load(laya_path, laya_checkpoint)
     if name == "idle":

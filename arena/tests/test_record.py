@@ -1,7 +1,7 @@
 import json
 
 from arena.agents import ConstantAgent
-from arena.record import record_episode, summarize
+from arena.record import make_agent, record_episode, summarize
 
 
 def test_writes_the_event_stream_to_game_agent_seed_path(tmp_path):
@@ -22,3 +22,16 @@ def test_summarize_aggregates_episode_ends():
     assert s["avg_distance_m"] == 200.0
     assert s["avg_reward"] == 10.0
     assert s["latency_p50_ms"] == 200.0
+
+
+def test_jev_prefers_a_typesafe_key_over_the_gateway(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "ts")
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "gw")
+    assert make_agent("jev").provider == "typesafe"
+
+
+def test_jev_falls_back_to_the_gateway_key(monkeypatch, tmp_path):
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "gw")
+    monkeypatch.setattr("arena.record.ROOT_ENV", tmp_path / "missing.env")
+    assert make_agent("jev").provider == "gateway"

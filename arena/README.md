@@ -16,7 +16,7 @@ flowchart LR
 
 - **`arena/highway/describe.py`** turns the road into words ("car close ahead (12 m), 4 m/s slower than you", "BLOCKED: car right beside you"). Decision models read meaning and can't do arithmetic, so raw coordinates are never sent.
 - **`arena/agents.py`** gives every agent the same interface, `decide(state, questions) -> answers`:
-  - `JevAgent` calls Vercel AI Gateway over HTTP. It retries 429 and 529 responses with backoff, and reports only the successful attempt's latency.
+  - `JevAgent` calls TypeSafe directly or through Vercel AI Gateway, over HTTP. It retries 429 and 529 responses with backoff, and reports only the successful attempt's latency.
   - `LayaAgent` runs the model locally.
   - `ConstantAgent` and `RandomAgent` are baselines.
 - **`arena/highway/runner.py`** yields a `start` event, one `step` event per decision (frame, state, answers, action, latency), then an `end` event. The same stream serves as a recording and, later, as a live feed. A failed decision falls back to `IDLE` and is recorded with an `error` field.
@@ -29,7 +29,10 @@ uv sync
 uv run python -c "from huggingface_hub import snapshot_download; snapshot_download('convaiinnovations/laya', local_dir='models/laya')"
 ```
 
-Jev reads `AI_GATEWAY_API_KEY` from the environment or from the repo-root `.env`.
+Jev looks for keys in the environment, then in the repo-root `.env`:
+
+- `TYPESAFE_API_KEY` is preferred. It calls `api.typesafe.ai/v1/systemone` directly with the pinned model `jev-1.13.0`, so runs are reproducible and there's no extra network hop. TypeSafe signups are currently paused.
+- `AI_GATEWAY_API_KEY` is the fallback, through Vercel AI Gateway (`typesafe-ai/jev`). The Gateway rate-limits often (HTTP 429), and the agent retries those with backoff.
 
 On Windows, Hugging Face's cache symlinks fail without Developer Mode, which is why Laya is downloaded to `models/laya`. PyTorch comes from the CUDA 12.6 index (`pyproject.toml`). If your NVIDIA driver is too old, Laya falls back to CPU at roughly 200–2000ms per decision, compared with about 33ms on a GPU.
 

@@ -16,22 +16,32 @@ def _http_post(url, headers, body):
 
 
 class JevAgent:
-    """TypeSafe's Jev through Vercel AI Gateway (same headers the AI SDK sends)."""
+    """TypeSafe's Jev, either through Vercel AI Gateway (same headers the AI SDK
+    sends) or directly from TypeSafe with a pinned model version."""
     name = "jev"
 
     RETRYABLE = {429, 529}  # rate limited / overloaded
+    TYPESAFE_URL = "https://api.typesafe.ai/v1/systemone"
+    TYPESAFE_MODEL = "jev-1.13.0"  # pinned so benchmark runs are reproducible
 
-    def __init__(self, api_key, post=_http_post, max_retries=5, backoff_s=1.0):
-        self.post, self.max_retries, self.backoff_s = post, max_retries, backoff_s
+    def __init__(self, api_key, provider="gateway", post=_http_post, max_retries=5, backoff_s=1.0):
+        self.provider, self.post, self.max_retries, self.backoff_s = provider, post, max_retries, backoff_s
         self.last_latency_ms, self.last_retries = None, 0
-        self.headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-            "ai-model-id": "typesafe-ai/jev",
-            "ai-evaluation-model-specification-version": "4",
-            "ai-gateway-protocol-version": "0.0.1",
-            "ai-gateway-auth-method": "api-key",
-        }
+        self.headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        if provider == "gateway":
+            self.url = GATEWAY_URL
+            self.headers.update({
+                "ai-model-id": "typesafe-ai/jev",
+                "ai-evaluation-model-specification-version": "4",
+                "ai-gateway-protocol-version": "0.0.1",
+                "ai-gateway-auth-method": "api-key",
+            })
+        else:
+            self.url = self.TYPESAFE_URL
+
+    def _body(self, state, questions):
+        body = {"state": state, "questions": questions}
+        return body if self.provider == "gateway" else {"model": self.TYPESAFE_MODEL, **body}
 
     def decide(self, state, questions):
         """Retries rate limits with exponential backoff. last_latency_ms covers
@@ -39,7 +49,7 @@ class JevAgent:
         for attempt in range(self.max_retries + 1):
             started = time.perf_counter()
             try:
-                answers = self.post(GATEWAY_URL, self.headers, {"state": state, "questions": questions})["answers"]
+                answers = self.post(self.url, self.headers, self._body(state, questions))["answers"]
             except urllib.error.HTTPError as e:
                 if e.code not in self.RETRYABLE or attempt == self.max_retries:
                     raise
