@@ -1,30 +1,23 @@
-from arena.agents import JevAgent, LayaAgent, ConstantAgent, RandomAgent, ensure_laya_weights
+import time
+import urllib.error
 
-
-def test_downloads_laya_weights_into_a_plain_folder_when_missing(tmp_path):
-    calls = []
-    target = tmp_path / "models" / "laya"
-    ensure_laya_weights(target, download=lambda **kw: calls.append(kw))
-    assert calls == [{"repo_id": "convaiinnovations/laya", "local_dir": str(target)}]
-
-
-def test_skips_the_download_when_weights_exist(tmp_path):
-    (tmp_path / "model.safetensors").write_text("x")
-    calls = []
-    ensure_laya_weights(tmp_path, download=lambda **kw: calls.append(kw))
-    assert calls == []
+from arena.agents import jev
+from arena.agents.jev import JevAgent
 
 QUESTIONS = {"action": {"type": "choice", "instructions": "Pick", "criteria": {"A": "a", "B": "b"}}}
 STATE = {"road": "clear"}
 
 
-def test_jev_posts_state_and_questions_to_the_gateway():
+def _http_error(code):
+    return urllib.error.HTTPError("u", code, "err", {}, None)
+
+
+def test_posts_state_and_questions_to_the_gateway():
     sent = {}
     def post(url, headers, body):
         sent.update(url=url, headers=headers, body=body)
         return {"answers": {"action": {"type": "choice", "choice": "B", "probabilities": {"A": 0.1, "B": 0.9}}}}
-    agent = JevAgent(api_key="k", post=post)
-    answers = agent.decide(STATE, QUESTIONS)
+    answers = JevAgent(api_key="k", post=post).decide(STATE, QUESTIONS)
     assert answers["action"]["choice"] == "B"
     assert sent["url"].endswith("/evaluation-model")
     assert sent["headers"]["Authorization"] == "Bearer k"
@@ -32,7 +25,7 @@ def test_jev_posts_state_and_questions_to_the_gateway():
     assert sent["body"] == {"state": STATE, "questions": QUESTIONS}
 
 
-def test_jev_can_call_typesafe_directly_with_a_pinned_model():
+def test_can_call_typesafe_directly_with_a_pinned_model():
     sent = {}
     def post(url, headers, body):
         sent.update(url=url, headers=headers, body=body)
@@ -45,12 +38,7 @@ def test_jev_can_call_typesafe_directly_with_a_pinned_model():
     assert sent["body"] == {"model": "jev-1.13.0", "state": STATE, "questions": QUESTIONS}
 
 
-def _http_error(code):
-    import urllib.error
-    return urllib.error.HTTPError("u", code, "err", {}, None)
-
-
-def test_jev_retries_rate_limits_and_overload_then_succeeds():
+def test_retries_rate_limits_and_overload_then_succeeds():
     calls = []
     def post(url, headers, body):
         calls.append(1)
@@ -63,7 +51,7 @@ def test_jev_retries_rate_limits_and_overload_then_succeeds():
     assert agent.last_retries == 2
 
 
-def test_jev_gives_up_after_max_retries():
+def test_gives_up_after_max_retries():
     def post(url, headers, body):
         raise _http_error(429)
     agent = JevAgent(api_key="k", post=post, backoff_s=0, max_retries=2)
@@ -74,7 +62,7 @@ def test_jev_gives_up_after_max_retries():
         assert "429" in str(e)
 
 
-def test_jev_does_not_retry_other_errors():
+def test_does_not_retry_other_errors():
     calls = []
     def post(url, headers, body):
         calls.append(1)
@@ -86,8 +74,7 @@ def test_jev_does_not_retry_other_errors():
     assert len(calls) == 1
 
 
-def test_jev_reports_latency_of_the_successful_attempt_only():
-    import time
+def test_reports_latency_of_the_successful_attempt_only():
     calls = []
     def post(url, headers, body):
         calls.append(1)
@@ -100,26 +87,23 @@ def test_jev_reports_latency_of_the_successful_attempt_only():
     assert agent.last_latency_ms < 150
 
 
-def test_laya_returns_the_model_answers():
-    class FakeModel:
-        def predict(self, state, questions):
-            return {"answers": {"action": {"choice": "A", "probabilities": {"A": 0.7, "B": 0.3}}}}
-    assert LayaAgent(model=FakeModel()).decide(STATE, QUESTIONS)["action"]["choice"] == "A"
+def test_from_env_prefers_a_typesafe_key_over_the_gateway(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "ts")
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "gw")
+    assert jev.from_env().provider == "typesafe"
 
 
-def test_constant_agent_always_picks_its_option_with_certainty():
-    answers = ConstantAgent("A").decide(STATE, QUESTIONS)
-    assert answers["action"] == {"type": "choice", "choice": "A", "probabilities": {"A": 1.0, "B": 0.0}}
+def test_from_env_falls_back_to_the_gateway_key(monkeypatch, tmp_path):
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "gw")
+    monkeypatch.setattr(jev, "ROOT_ENV", tmp_path / "missing.env")
+    assert jev.from_env().provider == "gateway"
 
 
-def test_random_agent_is_reproducible_with_a_seed():
-    a, b = RandomAgent(3), RandomAgent(3)
-    assert [a.decide(STATE, QUESTIONS)["action"]["choice"] for _ in range(20)] == \
-           [b.decide(STATE, QUESTIONS)["action"]["choice"] for _ in range(20)]
-
-
-def test_agents_have_display_names():
-    assert JevAgent(api_key="k").name == "jev"
-    assert LayaAgent(model=object()).name == "laya"
-    assert ConstantAgent("A").name == "always-A"
-    assert RandomAgent(0).name == "random"
+def test_from_env_reads_the_repo_root_env_file(monkeypatch, tmp_path):
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.delenv("AI_GATEWAY_API_KEY", raising=False)
+    env = tmp_path / ".env"
+    env.write_text("AI_GATEWAY_API_KEY=from-file\n")
+    monkeypatch.setattr(jev, "ROOT_ENV", env)
+    assert jev.from_env().headers["Authorization"] == "Bearer from-file"
