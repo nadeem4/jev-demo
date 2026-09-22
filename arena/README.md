@@ -85,6 +85,18 @@ Every agent plays the same seeds, so each faces the same traffic, food and cards
 
 Terminology: an **episode** is one full game (a highway drive of up to 40 seconds, a snake game, or 20 blackjack hands) and a **step** is one decision. There are no **epochs**, because nothing is trained: both models are tested exactly as they ship. Sample size is episodes per agent. A handful gives very wide intervals, so treat anything under about 50 as a first look.
 
+## Publish the site
+
+Live at **https://decision-arena-nine.vercel.app** (recordings, results and Learn; live play stays local).
+
+```
+uv run python -m arena.export        # refresh ui/public/data from runs/ and results/
+cd ui && npm run build:static        # static site in out/
+cd out && npx vercel deploy --prod   # deploy that folder
+```
+
+The `out/` folder is linked to the Vercel project `decision-arena`. Vercel Authentication is off for this project, so the site is publicly readable. Keys, models and the arena server are never deployed.
+
 ## Record single episodes
 
 ```
