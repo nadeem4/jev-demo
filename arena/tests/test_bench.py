@@ -121,3 +121,8 @@ def test_reports_cpu_when_the_gpu_is_visible_but_unusable():
 
     assert usable_device(BrokenCuda) == "cpu"
     assert usable_device(NoCuda) == "cpu"
+
+
+def test_intervals_for_non_negative_metrics_do_not_go_below_zero():
+    episodes = [[{"type": "start"}, {"type": "end", "steps": 1, "food_eaten": v}] for v in [0, 0, 0, 9]]
+    assert aggregate(episodes)["metrics"]["food_eaten"]["ci95"][0] == 0.0

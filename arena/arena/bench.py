@@ -61,6 +61,8 @@ def aggregate(episodes):
             metrics[key] = {"rate": _r(sum(values) / len(values)), "ci95": [_r(low), _r(high)]}
         elif all(isinstance(v, (int, float)) for v in values):
             mean, low, high = mean_ci([float(v) for v in values])
+            if low is not None and min(values) >= 0:
+                low = max(0.0, low)  # counts and distances can't be negative
             metrics[key] = {"mean": _r(mean), "ci95": [_r(low), _r(high)]}
 
     steps = [e for ep in episodes for e in ep if e["type"] == "step"]

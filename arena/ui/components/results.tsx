@@ -99,7 +99,7 @@ function GameResults({ run, older }: { run: Run; older: number }) {
                 <tr key={id} className="border-b border-line align-top">
                   <th scope="row" className="py-3 pr-4 text-base font-extrabold">
                     {agentName(run.game, id)}
-                    {d.failed > 0 && <span className="block text-xs font-semibold text-danger">{d.failed} failed decisions</span>}
+                    {d.failed > 0 && <span className="block text-xs font-semibold text-danger">{d.failed} failed decision{d.failed === 1 ? "" : "s"}</span>}
                   </th>
                   {info.results.map((m) => {
                     const { value, range } = format(a.metrics[m.key], m);
