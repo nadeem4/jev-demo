@@ -1,4 +1,4 @@
-from arena.highway.describe import describe, ACTIONS, QUESTIONS
+from arena.games.highway.describe import describe, ACTIONS, QUESTIONS
 
 # Snapshot: ego lane (0 = leftmost), lane count, speed, and other cars relative to ego
 # (dx metres ahead, dv m/s faster than ego). Plain dicts so tests need no simulator.

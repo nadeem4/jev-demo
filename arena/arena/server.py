@@ -11,8 +11,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .highway.runner import run_episode
-from .agents import make_agent
+from .agents import MODELS, make_agent
+from .games import GAME_NAMES
+from .runner import run_episode
 
 NAME = re.compile(r"^[\w-]+$")
 VIEWER_GONE = ConnectionError  # includes BrokenPipe, ConnectionReset and Windows ConnectionAborted
@@ -36,11 +37,11 @@ def list_runs(runs_dir):
     }
 
 
-def live_events(agent_name, seed, max_steps, get_agent):
+def live_events(game, agent_name, seed, max_steps, get_agent):
     yield {"type": "status", "message": f"Starting {agent_name}"}
     try:
-        agent = get_agent(agent_name)
-        yield from run_episode(agent, seed=seed, max_steps=max_steps)
+        agent = get_agent(agent_name, game, seed)
+        yield from run_episode(game, agent, seed=seed, max_steps=max_steps)
     except Exception as e:  # show the problem in the UI instead of a dead stream
         yield {"type": "error", "message": f"{agent_name}: {e}"}
 
@@ -48,8 +49,11 @@ def live_events(agent_name, seed, max_steps, get_agent):
 _agents, _lock = {}, threading.Lock()
 
 
-def cached_agent(name):
-    """Loads each agent once per server; Laya takes a while to load."""
+def cached_agent(name, game, seed):
+    """Jev and Laya are loaded once per server (Laya takes a while); baselines are
+    game-specific and cheap, so they're built per episode."""
+    if name not in MODELS:
+        return make_agent(name, game, seed)
     with _lock:
         if name not in _agents:
             _agents[name] = make_agent(name, laya_checkpoint="multilingual")
@@ -58,7 +62,7 @@ def cached_agent(name):
 
 def _preload(name):
     try:
-        cached_agent(name)
+        cached_agent(name, GAME_NAMES[0], 0)
         print(f"{name} loaded")
     except Exception as e:  # the UI will show the error when this agent is picked
         print(f"Could not preload {name}: {e}")
@@ -98,18 +102,19 @@ def make_server(port=8000, runs_dir="runs", get_agent=cached_agent, host="127.0.
             self._send(404, "Not found", "text/plain")
 
         def _live(self, q):
+            game = q.get("game", ["highway"])[0]
             agent = q.get("agent", [""])[0]
             seed = q.get("seed", ["0"])[0]
             max_steps = q.get("max_steps", [None])[0]
-            if not NAME.match(agent) or not seed.isdigit():
-                return self._send(400, "Bad agent or seed", "text/plain")
+            if game not in GAME_NAMES or not NAME.match(agent) or not seed.isdigit():
+                return self._send(400, "Bad game, agent or seed", "text/plain")
             self.send_response(200)
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Type", "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
             self.end_headers()
             try:
-                for event in live_events(agent, int(seed), int(max_steps) if max_steps else None, get_agent):
+                for event in live_events(game, agent, int(seed), int(max_steps) if max_steps else None, get_agent):
                     self.wfile.write(sse(event).encode())
                     self.wfile.flush()
             except VIEWER_GONE:

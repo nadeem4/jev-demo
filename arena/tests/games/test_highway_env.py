@@ -1,5 +1,5 @@
 import pytest
-from arena.highway.env import make_env, snapshot, frame
+from arena.games.highway.env import make_env, snapshot, frame
 
 
 @pytest.fixture

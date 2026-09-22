@@ -24,15 +24,15 @@ def test_list_runs_is_empty_without_a_runs_folder(tmp_path):
 
 
 def test_live_events_announce_loading_then_stream_the_episode():
-    events = list(live_events("idle", seed=0, max_steps=2, get_agent=lambda name: ConstantAgent("IDLE")))
+    events = list(live_events("highway", "idle", seed=0, max_steps=2, get_agent=lambda name, game, seed: ConstantAgent("IDLE")))
     assert events[0] == {"type": "status", "message": "Starting idle"}
     assert [e["type"] for e in events[1:]] == ["start", "step", "step", "end"]
 
 
 def test_live_events_report_agent_errors_instead_of_crashing():
-    def broken(name):
+    def broken(name, game, seed):
         raise RuntimeError("model files missing")
-    events = list(live_events("laya", seed=0, max_steps=1, get_agent=broken))
+    events = list(live_events("highway", "laya", seed=0, max_steps=1, get_agent=broken))
     assert events[-1]["type"] == "error"
     assert "model files missing" in events[-1]["message"]
 
@@ -41,7 +41,7 @@ def test_live_events_report_agent_errors_instead_of_crashing():
 def server(tmp_path):
     (tmp_path / "highway" / "jev").mkdir(parents=True)
     (tmp_path / "highway" / "jev" / "seed-0.json").write_text('[{"type": "start"}]')
-    srv = make_server(port=0, runs_dir=tmp_path, get_agent=lambda name: ConstantAgent("IDLE"))
+    srv = make_server(port=0, runs_dir=tmp_path, get_agent=lambda name, game, seed: ConstantAgent("IDLE"))
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{srv.server_address[1]}"
     srv.shutdown()
@@ -94,7 +94,19 @@ def test_rejects_paths_outside_the_runs_folder(server):
 
 
 def test_streams_a_live_episode_as_server_sent_events(server):
-    kind, body = get(server + "/api/live?agent=idle&seed=0&max_steps=2")
+    kind, body = get(server + "/api/live?game=highway&agent=idle&seed=0&max_steps=2")
     assert kind == "text/event-stream"
     types = [json.loads(line[6:])["type"] for line in body.splitlines() if line.startswith("data: ")]
     assert types == ["status", "start", "step", "step", "end"]
+
+
+def test_live_episodes_default_to_highway(server):
+    body = get(server + "/api/live?agent=idle&seed=0&max_steps=1")[1]
+    start = next(json.loads(l[6:]) for l in body.splitlines() if '"start"' in l)
+    assert start["game"] == "highway"
+
+
+def test_rejects_unknown_games(server):
+    with pytest.raises(urllib.error.HTTPError) as e:
+        get(server + "/api/live?game=chess&agent=idle&seed=0")
+    assert e.value.code == 400

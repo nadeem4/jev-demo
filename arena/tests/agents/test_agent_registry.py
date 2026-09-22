@@ -1,16 +1,16 @@
 import pytest
 
 from arena import agents
-from arena.agents import AGENT_NAMES, make_agent
+from arena.agents import agent_names, make_agent
 
 
-def test_lists_every_agent_the_arena_can_run():
-    assert AGENT_NAMES == ["jev", "laya", "idle", "random"]
+def test_every_game_offers_jev_laya_and_its_own_baselines():
+    assert agent_names("highway") == ["jev", "laya", "idle", "random"]
 
 
-def test_builds_baselines_by_name():
-    assert make_agent("idle").name == "always-IDLE"
-    assert make_agent("random").name == "random"
+def test_builds_a_game_baseline_by_name():
+    assert make_agent("idle", game="highway").name == "always-IDLE"
+    assert make_agent("random", game="highway").name == "random"
 
 
 def test_builds_jev_from_the_environment(monkeypatch):
@@ -27,6 +27,6 @@ def test_loads_laya_from_the_laya_path_setting(monkeypatch):
     assert seen == {"path": "/models/laya", "checkpoint": "multilingual"}
 
 
-def test_rejects_unknown_agents():
+def test_rejects_agents_the_game_does_not_have():
     with pytest.raises(ValueError, match="unknown agent"):
-        make_agent("gpt")
+        make_agent("gpt", game="highway")
