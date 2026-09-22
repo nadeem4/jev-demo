@@ -2,6 +2,8 @@
 
 Demos built on [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev), TypeSafe AI's System One decision model, and [Laya](https://github.com/NandhaKishorM/laya), an open-source alternative.
 
+**Live site: [decision-arena-nine.vercel.app](https://decision-arena-nine.vercel.app)** — watch both models play, see the [benchmark results](https://decision-arena-nine.vercel.app/results/), the [scorecard](https://decision-arena-nine.vercel.app/scorecard/) of who wins which metric, and [how the models work](https://decision-arena-nine.vercel.app/learn/).
+
 ## Setup
 
 Put your Jev key in `.env` at the repo root. All demos share it.
@@ -17,7 +19,7 @@ The Vercel account needs a credit card on file before AI Gateway will serve requ
 
 | Folder | What it does |
 |---|---|
-| [arena](arena/) | Jev vs open-source Laya (plus baselines) driving highway-env with zero training. Watch them side by side, live or from recordings |
+| [arena](arena/) | Jev vs open-source Laya (plus baselines) playing highway-env, Snake and Blackjack with zero training. Watch them side by side, live or from recordings, and benchmark them |
 | [agent-watchdog](agent-watchdog/) | Supervises Claude Code: scores every tool call for reversibility, scope drift, prompt injection, and looping before it runs |
 
 ## Quick start
