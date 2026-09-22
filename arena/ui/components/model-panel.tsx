@@ -4,7 +4,10 @@ import { WarningCircle } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { GAMES, type AgentInfo } from "@/lib/games";
 import { concerns, tone, type Tone } from "@/lib/insights";
-import type { AnyFrame, EndEvent, GameId, StepEvent } from "@/lib/types";
+import type { EndEvent, GameId } from "@/lib/types";
+import type { PanelView } from "@/lib/views";
+
+export type { PanelView };
 
 const TONE_CLASS: Record<Tone, string> = {
   danger: "text-danger font-semibold",
@@ -13,15 +16,6 @@ const TONE_CLASS: Record<Tone, string> = {
   normal: "text-ink",
 };
 
-export interface PanelView {
-  startFrame: AnyFrame | null;
-  step: StepEvent | null;
-  end: EndEvent | null;
-  failed: string | null;
-  status: string;
-  waiting: boolean;
-  started: boolean;
-}
 
 export function ModelPanel({ game, agent, view, align }: { game: GameId; agent: AgentInfo; view: PanelView; align: "left" | "right" }) {
   const reduce = useReducedMotion();

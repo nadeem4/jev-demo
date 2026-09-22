@@ -9,7 +9,8 @@ import { GAMES, GAME_IDS } from "@/lib/games";
 import { Playback, type FrameView } from "@/lib/playback";
 import type { ArenaEvent, GameId } from "@/lib/types";
 import { BlackjackBoard } from "./blackjack-board";
-import { ModelPanel, type PanelView } from "./model-panel";
+import { viewsForGame, type PanelView, type TaggedViews } from "@/lib/views";
+import { ModelPanel } from "./model-panel";
 
 type Source = "live" | "recording";
 const SIDES = [0, 1] as const;
@@ -37,9 +38,10 @@ export function Arena() {
   const [runsIndex, setRunsIndex] = useState<RunsIndex>({});
   const [speed, setSpeed] = useState(1);
   const [running, setRunning] = useState(false);
-  const [views, setViews] = useState<PanelView[]>(() => SIDES.map(() => viewOf(new Playback())));
+  const [tagged, setTagged] = useState<TaggedViews>(() => ({ game: "highway", views: SIDES.map(() => viewOf(new Playback())) }));
 
   const info = GAMES[game];
+  const views = viewsForGame(tagged, game);
   const playbacks = useRef<Playback[]>(SIDES.map(() => new Playback()));
   const canvases = useRef<(HTMLCanvasElement | null)[]>([null, null]);
   const streams = useRef<EventSource[]>([]);
@@ -65,7 +67,7 @@ export function Arena() {
       const key = pbs.map((p) => `${p.current?.t}|${p.end?.steps}|${p.failed}|${p.status}|${p.waiting}|${p.ready}`).join("/");
       if (key !== lastKey) {
         lastKey = key;
-        setViews(pbs.map((p) => viewOf(p)));
+        setTagged({ game: gameRef.current, views: pbs.map((p) => viewOf(p)) });
       }
       raf = requestAnimationFrame(loop);
     };
