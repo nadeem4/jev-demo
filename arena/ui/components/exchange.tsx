@@ -1,10 +1,15 @@
 "use client";
 
+import { CaretRight } from "@phosphor-icons/react";
+import { useId, useState } from "react";
+import type { RequestQuestions } from "@/lib/decisions";
 import type { StepEvent } from "@/lib/types";
 import { Code, CopyButton } from "./code";
 
-/** One model's wire for the decision on screen: what varied in the request, what came back. */
-export function Exchange({ name, step, waitingFor }: { name: string; step: StepEvent | null; waitingFor: string }) {
+/** One model's wire for the decision on screen: the whole request, and what came back. */
+export function Exchange({ name, step, questions, waitingFor }: {
+  name: string; step: StepEvent | null; questions: RequestQuestions | null; waitingFor: string;
+}) {
   const request = step ? { state: step.state } : null;
   const response = step ? (step.answers ?? { error: step.error ?? "no answer" }) : null;
 
@@ -28,11 +33,12 @@ export function Exchange({ name, step, waitingFor }: { name: string; step: StepE
           <div className="flex min-w-0 flex-col bg-surface">
             <div className="flex items-center justify-between gap-3 px-4 py-2">
               <h4 className="min-w-0 text-micro font-semibold text-ink-soft">
-                REQUEST · state <span className="font-normal">(the envelope above completes it)</span>
+                REQUEST · state <span className="font-normal">(what changes each decision)</span>
               </h4>
               <CopyButton value={request} />
             </div>
             <Code value={request} className="max-h-[18rem] grow" />
+            {questions && <Questions questions={questions} />}
           </div>
           <div className="flex min-w-0 flex-col bg-surface">
             <div className="flex items-center justify-between gap-3 px-4 py-2">
@@ -44,5 +50,30 @@ export function Exchange({ name, step, waitingFor }: { name: string; step: StepE
         </div>
       )}
     </section>
+  );
+}
+
+/** The other half of the same request, folded away because it never changes. */
+function Questions({ questions }: { questions: RequestQuestions }) {
+  const [open, setOpen] = useState(false);
+  const id = useId();
+
+  return (
+    <div className="border-t border-line">
+      <div className="flex items-center justify-between gap-3 px-4 py-2">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          aria-controls={id}
+          className="flex min-w-0 items-center gap-1.5 text-micro font-semibold text-ink-soft hover:text-ink"
+        >
+          <CaretRight size={12} weight="bold" aria-hidden className={`shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
+          <span className="truncate">{questions.summary}</span>
+        </button>
+        {open && <CopyButton value={questions.body} />}
+      </div>
+      <div id={id}>{open && <Code value={questions.body} className="max-h-[18rem]" />}</div>
+    </div>
   );
 }

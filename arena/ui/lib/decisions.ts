@@ -1,5 +1,5 @@
 // Shapes the recorded events for the play page: the decision list, the part of the
-// request that never changes, and the shared scale under the boards.
+// request that never changes, and the shared scale under the bands.
 
 import { concerns } from "./insights";
 import type { GameId, StartEvent, StepEvent } from "./types";
@@ -25,29 +25,24 @@ export function decisionRows(game: GameId, histories: StepEvent[][]): DecisionRo
   return ts.map((t) => ({ t, cells: histories.map((h) => cellFor(game, h.find((s) => s.t === t))) }));
 }
 
-export interface Envelope {
-  /** The instructions sent with every decision, one per question. */
-  instructions: string[];
-  /** What each option means, exactly as recorded. */
-  criteria: { id: string; text: string }[];
-  /** The `questions` object itself, for the exact body. */
+export interface RequestQuestions {
+  /** The `questions` object itself, exactly as recorded. */
   body: unknown;
+  /** How the request pane names it, collapsed. */
+  summary: string;
 }
 
-interface Question { instructions?: string; criteria?: Record<string, string> }
-
-/** The part of the request that is identical on every decision of an episode. */
-export function envelopeOf(start: StartEvent | null): Envelope | null {
+/** The half of the request that is identical on every call: the questions the model answers. */
+export function questionsOf(start: StartEvent | null): RequestQuestions | null {
   const questions = start?.questions;
   if (!questions || typeof questions !== "object") return null;
-  const instructions: string[] = [];
-  const criteria: { id: string; text: string }[] = [];
-  for (const q of Object.values(questions as Record<string, Question>)) {
-    if (q?.instructions) instructions.push(q.instructions);
-    for (const [id, text] of Object.entries(q?.criteria ?? {})) criteria.push({ id, text });
-  }
-  if (!instructions.length && !criteria.length) return null;
-  return { instructions, criteria, body: questions };
+  const count = start?.options?.length ?? 0;
+  return {
+    body: questions,
+    summary: count
+      ? `questions — the ${count} option${count === 1 ? "" : "s"}, identical on every call`
+      : "questions — identical on every call",
+  };
 }
 
 /** Puts every model's headline measure on one scale, so the bars can be read against each other. */

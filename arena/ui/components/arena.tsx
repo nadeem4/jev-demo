@@ -3,19 +3,17 @@
 import { CaretLeft, CaretRight, Pause, Play } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { STATIC_SITE, commonSeeds, urls, type RunsIndex } from "@/lib/api";
-import { compareBars, decisionRows, envelopeOf } from "@/lib/decisions";
+import { compareBars, decisionRows, questionsOf } from "@/lib/decisions";
 import { drawHighway } from "@/lib/draw/highway";
 import { drawSnake } from "@/lib/draw/snake";
 import { GAMES, GAME_IDS } from "@/lib/games";
-import { tone, type Tone } from "@/lib/insights";
 import { Playback, type FrameView } from "@/lib/playback";
 import type { ArenaEvent, GameId } from "@/lib/types";
 import { viewsForGame, type PanelView, type TaggedViews } from "@/lib/views";
 import { BlackjackBoard } from "./blackjack-board";
 import { DecisionList } from "./decision-list";
-import { EnvelopeStrip } from "./envelope-strip";
 import { Exchange } from "./exchange";
-import { MovesCard } from "./moves-card";
+import { ModelBand } from "./model-band";
 import { RunItYourself } from "./run-it-yourself";
 
 type Source = "live" | "recording";
@@ -31,12 +29,6 @@ const BOARD_CLASS: Partial<Record<GameId, string>> = {
   snake: "aspect-square w-[min(62vw,240px)]",
 };
 const SCENARIO_WORD: Record<GameId, string> = { highway: "traffic", snake: "food layout", blackjack: "deck" };
-const TONE: Record<Tone, string> = {
-  danger: "text-danger font-semibold",
-  clear: "text-clear",
-  muted: "text-ink-soft",
-  normal: "text-ink",
-};
 
 function viewOf(p: Playback): PanelView {
   return { start: p.start, startFrame: p.start?.frame ?? null, step: p.current, history: p.history, end: p.end,
@@ -120,9 +112,6 @@ export function Arena() {
     return step ? { ...v, step } : { ...v, step, started: true, status: last ? `It made no decision ${pinned}; its episode ended at ${last.t}.` : "" };
   });
   const rows = decisionRows(game, live.map((v) => v.history));
-  const latest = Math.max(0, ...views.map((v) => v.step?.t ?? 0));
-  const decision = pinned ?? (latest || null);
-  const envelope = envelopeOf(views.find((v) => v.start)?.start ?? null);
   const bars = compareBars(views.map((v) => info.measure.value(v)));
 
   function reset() {
@@ -293,35 +282,25 @@ export function Arena() {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(420px,460px)_minmax(0,1fr)] lg:items-start lg:gap-10">
         <div className="grid content-start gap-6">
-          <MovesCard game={game} agents={infos} views={views} decision={decision} />
-
-          <div className="grid gap-5">
-            {SIDES.map((i) => (
-              <figure key={i} className="grid content-start justify-items-center gap-2">
-                <figcaption className="w-full text-micro font-semibold text-ink-soft">{names[i]}</figcaption>
-                {DRAW[game] ? (
-                  <canvas
-                    key={game}
-                    ref={(el) => { canvases.current[i] = el; }}
-                    className={BOARD_CLASS[game]}
-                    role="img"
-                    aria-label={`${info.name} played by ${names[i]}. The yellow piece is this model's.`}
-                  />
-                ) : (
-                  <BlackjackBoard step={views[i].step} start={views[i].startFrame} />
-                )}
-                <dl className="mt-1 grid w-full grid-cols-2 gap-2 border-t border-line pt-2 text-center">
-                  {info.stats(views[i].step, views[i].end).map((s) => (
-                    <div key={s.label}>
-                      <dt className="text-micro text-ink-soft">{s.label}</dt>
-                      <dd className={`numeric text-body font-extrabold ${s.danger ? "text-danger" : ""}`}>{s.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-                <StateRead game={game} view={views[i]} />
-              </figure>
-            ))}
-          </div>
+          {SIDES.map((i) => (
+            <ModelBand
+              key={infos[i].id + i}
+              game={game}
+              agent={infos[i]}
+              view={views[i]}
+              board={DRAW[game] ? (
+                <canvas
+                  key={game}
+                  ref={(el) => { canvases.current[i] = el; }}
+                  className={BOARD_CLASS[game]}
+                  role="img"
+                  aria-label={`${info.name} played by ${names[i]}. The yellow piece is this model's.`}
+                />
+              ) : (
+                <BlackjackBoard step={views[i].step} start={views[i].startFrame} />
+              )}
+            />
+          ))}
 
           <section aria-labelledby="compare-title" className="border-t-2 border-line-strong pt-4">
             <h2 id="compare-title" className="text-micro text-ink-soft">{info.measure.label}, both on one scale</h2>
@@ -342,12 +321,12 @@ export function Arena() {
         </div>
 
         <div className="grid min-w-0 content-start gap-6">
-          <EnvelopeStrip envelope={envelope} />
           {SIDES.map((i) => (
             <Exchange
               key={names[i] + i}
               name={names[i]}
               step={views[i].step}
+              questions={questionsOf(views[i].start)}
               waitingFor={views[i].failed ?? (views[i].started ? views[i].status || "Starting…" : "Press Play to see the wire.")}
             />
           ))}
@@ -357,26 +336,6 @@ export function Arena() {
 
       {STATIC_SITE && <RunItYourself />}
     </main>
-  );
-}
-
-/** The plain-language situation the model was given, under its board. */
-function StateRead({ game, view }: { game: GameId; view: PanelView }) {
-  const info = GAMES[game];
-  const step = view.step;
-  if (!step) return null;
-  return (
-    <div className="w-full border-t border-line pt-2">
-      <p className="text-micro text-ink-soft">What it read before deciding</p>
-      <dl className="mt-1.5 grid gap-1">
-        {info.stateOrder.filter((k) => step.state[k]).map((k) => (
-          <div key={k} className="flex flex-wrap items-baseline gap-x-2">
-            <dt className="text-micro text-ink-soft">{info.stateLabels[k] ?? k}</dt>
-            <dd className={`text-micro leading-snug ${TONE[tone(step.state[k])]}`}>{step.state[k]}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
   );
 }
 

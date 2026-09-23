@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareBars, decisionRows, envelopeOf } from "./decisions";
+import { compareBars, decisionRows, questionsOf } from "./decisions";
 import type { StartEvent, StepEvent } from "./types";
 
 const step = (t: number, action: string, probs: Record<string, number>, over: Partial<StepEvent> = {}): StepEvent => ({
@@ -13,8 +13,8 @@ const step = (t: number, action: string, probs: Record<string, number>, over: Pa
   ...over,
 });
 
-const start = (questions: unknown): StartEvent => ({
-  type: "start", game: "highway", agent: "jev", seed: 4, options: ["IDLE"], questions, frame: {},
+const start = (questions: unknown, options: string[] = ["IDLE"]): StartEvent => ({
+  type: "start", game: "highway", agent: "jev", seed: 4, options, questions, frame: {},
 });
 
 const QUESTIONS = {
@@ -53,20 +53,24 @@ describe("decisionRows", () => {
   });
 });
 
-describe("envelopeOf", () => {
-  it("reads the instructions and option criteria sent with every decision", () => {
-    const env = envelopeOf(start(QUESTIONS))!;
-    expect(env.instructions).toEqual(["You are driving on a highway. Pick the next action."]);
-    expect(env.criteria).toEqual([
-      { id: "IDLE", text: "Keep your lane and speed." },
-      { id: "FASTER", text: "Accelerate." },
-    ]);
-    expect(env.body).toEqual(QUESTIONS);
+describe("questionsOf", () => {
+  it("hands back the questions exactly as recorded, named by the game's option count", () => {
+    const q = questionsOf(start(QUESTIONS, ["IDLE", "FASTER", "SLOWER", "LANE_LEFT", "LANE_RIGHT"]))!;
+    expect(q.body).toEqual(QUESTIONS);
+    expect(q.summary).toBe("questions — the 5 options, identical on every call");
   });
 
-  it("has no envelope when the recording has no questions", () => {
-    expect(envelopeOf(null)).toBeNull();
-    expect(envelopeOf(start(undefined))).toBeNull();
+  it("says option, not options, when the game offers only one", () => {
+    expect(questionsOf(start(QUESTIONS))!.summary).toBe("questions — the 1 option, identical on every call");
+  });
+
+  it("names the questions without a count when the recording lists no options", () => {
+    expect(questionsOf(start(QUESTIONS, []))!.summary).toBe("questions — identical on every call");
+  });
+
+  it("has nothing to show when the recording has no questions", () => {
+    expect(questionsOf(null)).toBeNull();
+    expect(questionsOf(start(undefined))).toBeNull();
   });
 });
 
