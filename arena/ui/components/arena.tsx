@@ -21,6 +21,11 @@ const DRAW: Partial<Record<GameId, (c: HTMLCanvasElement, v: FrameView | null, e
   highway: drawHighway,
   snake: (c, v) => drawSnake(c, v),
 };
+const SCENARIO_WORD: Record<GameId, string> = {
+  highway: "traffic",
+  snake: "food layout",
+  blackjack: "deck",
+};
 const BOARD_CLASS: Partial<Record<GameId, string>> = {
   highway: "h-[min(620px,70dvh)] w-[140px] md:w-[160px]",
   snake: "aspect-square w-[min(42vw,260px)]",
@@ -38,7 +43,7 @@ export function Arena() {
   const [source, setSource] = useState<Source>(STATIC_SITE ? "recording" : "live");
   const [runsIndex, setRunsIndex] = useState<RunsIndex>({});
   const [speed, setSpeed] = useState(1);
-  const [running, setRunning] = useState(false);
+  const [playing, setPlaying] = useState<{ game: GameId; agents: [string, string]; seed: number } | null>(null);
   const [tagged, setTagged] = useState<TaggedViews>(() => ({ game: "highway", views: SIDES.map(() => viewOf(new Playback())) }));
 
   const info = GAMES[game];
@@ -89,7 +94,7 @@ export function Arena() {
     streams.current.forEach((s) => s.close());
     streams.current = [];
     playbacks.current = SIDES.map(() => new Playback());
-    setRunning(false);
+    setPlaying(null);
   }
 
   function pickGame(id: GameId) {
@@ -101,7 +106,7 @@ export function Arena() {
   function play(e: React.FormEvent) {
     e.preventDefault();
     reset();
-    setRunning(true);
+    setPlaying({ game, agents, seed: seedToPlay });
     SIDES.forEach((i) => {
       const pb = playbacks.current[i];
       pb.status = "Starting…";
@@ -133,6 +138,8 @@ export function Arena() {
       }
     });
   }
+
+  const stale = playing !== null && (playing.game !== game || playing.seed !== seedToPlay || playing.agents[0] !== agents[0] || playing.agents[1] !== agents[1]);
 
   const setAgent = (i: 0 | 1, id: string) => setAgents((a) => (i === 0 ? [id, a[1]] : [a[0], id]));
   // The recording being replayed is a plain JSON file: link it so anyone can read the raw decisions.
@@ -168,7 +175,7 @@ export function Arena() {
       <form onSubmit={play} className="mt-5 flex flex-wrap items-end gap-x-6 gap-y-4 border-y border-line py-5">
         <Field label="Left model"><AgentSelect agents={info.agents} value={agents[0]} onChange={(id) => setAgent(0, id)} /></Field>
         <Field label="Right model"><AgentSelect agents={info.agents} value={agents[1]} onChange={(id) => setAgent(1, id)} /></Field>
-        <Field label={game === "blackjack" ? "Deck" : game === "snake" ? "Food layout" : "Traffic"}>
+        <Field label="Scenario">
           {STATIC_SITE ? (
             <select
               value={seedToPlay ?? ""} disabled={!recorded.length}
@@ -216,13 +223,14 @@ export function Arena() {
             <option value={4}>4x</option>
           </select>
         </Field>
+        {stale && <p className="self-center text-sm font-semibold text-ink">Press Play to load it</p>}
         <button
           type="submit"
           disabled={STATIC_SITE && !recorded.length}
           className="flex h-11 disabled:opacity-50 items-center gap-2 rounded-md bg-accent px-6 text-base font-extrabold text-accent-ink transition-transform active:scale-[0.98] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-marking"
         >
           <Play size={18} weight="fill" aria-hidden />
-          {running ? "Play again" : "Play"}
+          {playing ? "Play again" : "Play"}
         </button>
       </form>
 
@@ -231,7 +239,13 @@ export function Arena() {
           <ModelPanel game={game} agent={agentInfo(agents[0])} view={views[0]} align="left" rawUrl={rawUrl(0)} />
         </div>
 
-        <div className="order-1 flex justify-center gap-4 lg:order-2">
+        <div className="order-1 grid justify-items-center gap-3 lg:order-2">
+          <p className="text-sm text-ink-soft">
+            {playing
+              ? `Scenario ${playing.seed}: both models get the same ${SCENARIO_WORD[playing.game]}`
+              : `Scenario ${seedToPlay ?? 0}: both models get the same ${SCENARIO_WORD[game]}`}
+          </p>
+          <div className="flex justify-center gap-4">
           {SIDES.map((i) => (
             <figure key={i} className="grid content-start justify-items-center gap-2">
               <figcaption className="text-base font-extrabold">{agentInfo(agents[i]).name}</figcaption>
@@ -256,6 +270,7 @@ export function Arena() {
               </dl>
             </figure>
           ))}
+          </div>
         </div>
 
         <div className="order-3">
