@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Overpass } from "next/font/google";
+import { Overpass, Overpass_Mono } from "next/font/google";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import "./globals.css";
 
 // Overpass is an open-source take on Highway Gothic, the lettering on US road signs.
 const overpass = Overpass({ variable: "--font-overpass", subsets: ["latin"], weight: ["400", "600", "800"] });
+// Its monospace sibling, for the data the models exchange.
+const overpassMono = Overpass_Mono({ variable: "--font-overpass-mono", subsets: ["latin"], weight: ["400", "600"] });
 
 export const metadata: Metadata = {
   title: "Decision Arena",
@@ -14,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${overpass.variable} antialiased`}>
+    <html lang="en" className={`${overpass.variable} ${overpassMono.variable} antialiased`}>
       <body className="min-h-[100dvh]">
         <SiteNav />
         {children}

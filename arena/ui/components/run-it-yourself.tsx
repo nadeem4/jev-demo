@@ -33,13 +33,13 @@ export function RunItYourself() {
 
       <ol className="mt-6 grid gap-5 md:grid-cols-2">
         {STEPS.map(({ title, body, code }, i) => (
-          <li key={title} className="grid content-start gap-2 border-t-2 border-line pt-3">
+          <li key={title} className="grid min-w-0 content-start gap-2 border-t-2 border-line pt-3">
             <h3 className="text-lg font-extrabold">
               <span className="text-ink-soft">{i + 1}.</span> {title}
             </h3>
             <p className="max-w-[46ch] text-ink-soft">{body}</p>
             {code && (
-              <pre className="overflow-x-auto rounded-md bg-surface p-3 text-sm text-ink"><code>{code}</code></pre>
+              <pre className="max-w-full overflow-x-auto bg-surface p-3 font-mono text-micro text-ink"><code>{code}</code></pre>
             )}
           </li>
         ))}

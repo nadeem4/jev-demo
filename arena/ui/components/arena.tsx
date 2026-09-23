@@ -8,32 +8,29 @@ import { drawSnake } from "@/lib/draw/snake";
 import { GAMES, GAME_IDS } from "@/lib/games";
 import { Playback, type FrameView } from "@/lib/playback";
 import type { ArenaEvent, GameId } from "@/lib/types";
-import { BlackjackBoard } from "./blackjack-board";
 import { viewsForGame, type PanelView, type TaggedViews } from "@/lib/views";
+import { BlackjackBoard } from "./blackjack-board";
+import { Inspector } from "./inspector";
 import { ModelPanel } from "./model-panel";
 import { RunItYourself } from "./run-it-yourself";
 
 type Source = "live" | "recording";
 const SIDES = [0, 1] as const;
 
-// Canvas games draw every animation frame; Blackjack is plain markup that updates per decision.
+// Canvas games redraw every frame; Blackjack is markup that updates per decision.
 const DRAW: Partial<Record<GameId, (c: HTMLCanvasElement, v: FrameView | null, ended: boolean) => void>> = {
   highway: drawHighway,
   snake: (c, v) => drawSnake(c, v),
 };
-const SCENARIO_WORD: Record<GameId, string> = {
-  highway: "traffic",
-  snake: "food layout",
-  blackjack: "deck",
-};
 const BOARD_CLASS: Partial<Record<GameId, string>> = {
-  highway: "h-[min(620px,70dvh)] w-[140px] md:w-[160px]",
-  snake: "aspect-square w-[min(42vw,260px)]",
+  highway: "h-[min(560px,64dvh)] w-[132px] md:w-[150px]",
+  snake: "aspect-square w-[min(40vw,240px)]",
 };
+const SCENARIO_WORD: Record<GameId, string> = { highway: "traffic", snake: "food layout", blackjack: "deck" };
 
-// A side counts as started once Play gave it a status; before that it shows Ready.
 function viewOf(p: Playback): PanelView {
-  return { start: p.start, startFrame: p.start?.frame ?? null, step: p.current, end: p.end, failed: p.failed, status: p.status, waiting: p.waiting, started: p.status !== "" };
+  return { start: p.start, startFrame: p.start?.frame ?? null, step: p.current, end: p.end,
+           failed: p.failed, status: p.status, waiting: p.waiting, started: p.status !== "" };
 }
 
 export function Arena() {
@@ -41,9 +38,9 @@ export function Arena() {
   const [agents, setAgents] = useState<[string, string]>(["jev", "laya"]);
   const [seed, setSeed] = useState(4);
   const [source, setSource] = useState<Source>(STATIC_SITE ? "recording" : "live");
-  const [runsIndex, setRunsIndex] = useState<RunsIndex>({});
   const [speed, setSpeed] = useState(1);
   const [raw, setRaw] = useState(false);
+  const [runsIndex, setRunsIndex] = useState<RunsIndex>({});
   const [playing, setPlaying] = useState<{ game: GameId; agents: [string, string]; seed: number } | null>(null);
   const [tagged, setTagged] = useState<TaggedViews>(() => ({ game: "highway", views: SIDES.map(() => viewOf(new Playback())) }));
 
@@ -57,8 +54,8 @@ export function Arena() {
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { gameRef.current = game; }, [game]);
 
-  // One animation loop for both sides. Playback holds until both sides have their
-  // first frame (or failed), so a slow-loading model doesn't start late.
+  // One animation loop for both sides. Playback waits until both are ready, so a
+  // slow-loading model never starts late.
   useEffect(() => {
     let raf = 0;
     let lastKey = "";
@@ -83,13 +80,14 @@ export function Arena() {
   }, []);
 
   useEffect(() => () => streams.current.forEach((s) => s.close()), []);
+  useEffect(() => { fetch(urls.runsIndex).then((r) => (r.ok ? r.json() : {})).then(setRunsIndex).catch(() => {}); }, []);
 
-  // What has been recorded, so the published site only offers replays that exist.
-  useEffect(() => {
-    fetch(urls.runsIndex).then((r) => (r.ok ? r.json() : {})).then(setRunsIndex).catch(() => {});
-  }, []);
   const recorded = commonSeeds(runsIndex, game, agents[0], agents[1]);
   const seedToPlay = STATIC_SITE && !recorded.includes(seed) ? recorded[0] : seed;
+  const agentInfo = (id: string) => info.agents.find((a) => a.id === id) ?? info.agents[0];
+  const names: [string, string] = [agentInfo(agents[0]).name, agentInfo(agents[1]).name];
+  const stale = playing !== null &&
+    (playing.game !== game || playing.seed !== seedToPlay || playing.agents[0] !== agents[0] || playing.agents[1] !== agents[1]);
 
   function reset() {
     streams.current.forEach((s) => s.close());
@@ -120,7 +118,7 @@ export function Arena() {
           if (ev.type === "end" || ev.type === "error") es.close();
         };
         es.onerror = () => {
-          if (!pb.end) pb.push({ type: "error", message: "Lost the connection to the arena server. Start it with docker compose up, or uv run python -m arena.server." });
+          if (!pb.end) pb.push({ type: "error", message: "Lost the connection to the arena server. Start it with docker compose up." });
           es.close();
         };
         streams.current.push(es);
@@ -133,174 +131,151 @@ export function Arena() {
           .catch(() => pb.push({
             type: "error",
             message: STATIC_SITE
-              ? `No recording of ${info.agents.find((a) => a.id === agent)?.name} on ${info.name} for this seed.`
-              : `No recording of ${info.agents.find((a) => a.id === agent)?.name} on ${info.name}, seed ${seedToPlay}. Record one with: uv run python -m arena.record --game ${game} --agent ${agent} --seed-start ${seedToPlay} --episodes 1`,
+              ? `No recording of ${agentInfo(agent).name} on ${info.name} for this scenario.`
+              : `No recording of ${agentInfo(agent).name} on ${info.name}, scenario ${seedToPlay}. Record one with: uv run python -m arena.record --game ${game} --agent ${agent} --seed-start ${seedToPlay} --episodes 1`,
           }));
       }
     });
   }
 
-  const stale = playing !== null && (playing.game !== game || playing.seed !== seedToPlay || playing.agents[0] !== agents[0] || playing.agents[1] !== agents[1]);
-
   const setAgent = (i: 0 | 1, id: string) => setAgents((a) => (i === 0 ? [id, a[1]] : [a[0], id]));
-  // The recording being replayed is a plain JSON file: link it so anyone can read the raw decisions.
-  const rawUrl = (i: 0 | 1) => (views[i].step && source === "recording" ? urls.run(game, agents[i], seedToPlay) : null);
-  const agentInfo = (id: string) => info.agents.find((a) => a.id === id) ?? info.agents[0];
 
   return (
-    <main className="mx-auto max-w-[1400px] px-4 pb-16 pt-8 md:px-8">
-      <header className="max-w-[62ch]">
-        <h1 className="text-4xl font-extrabold leading-none tracking-tight md:text-5xl">Watch them play</h1>
-        <p className="mt-3 text-lg leading-relaxed text-ink-soft">
-          Two decision models play the same game with zero training. Watch what each one reads and what it picks.
-        </p>
+    <main className="mx-auto max-w-[1400px] px-4 pb-16 md:px-8">
+      <header className="grid gap-3 pt-10 pb-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+        <div>
+          <h1 className="text-h1 font-extrabold leading-[0.95] tracking-tight">Watch them decide</h1>
+          <p className="mt-3 max-w-[54ch] text-lead leading-relaxed text-ink-soft">
+            Two decision models, the same game, the same situations, no training. Every move they make, and the reason behind it, is on the page.
+          </p>
+        </div>
+        <nav aria-label="Games" className="flex flex-wrap gap-1.5 md:justify-end">
+          {GAME_IDS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => pickGame(id)}
+              aria-pressed={game === id}
+              className={`h-10 px-4 text-body font-extrabold transition-colors ${
+                game === id ? "bg-ink text-page" : "bg-surface text-ink-soft hover:text-ink"
+              }`}
+            >
+              {GAMES[id].name}
+            </button>
+          ))}
+        </nav>
       </header>
 
-      <nav aria-label="Games" className="mt-8 flex flex-wrap gap-2">
-        {GAME_IDS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => pickGame(id)}
-            aria-pressed={game === id}
-            className={`h-11 rounded-md border-2 px-5 text-base font-extrabold focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-marking ${
-              game === id ? "border-accent bg-accent text-accent-ink" : "border-line bg-surface text-ink hover:border-ink-soft"
-            }`}
-          >
-            {GAMES[id].name}
-          </button>
-        ))}
-      </nav>
-      <p className="mt-3 text-base text-ink-soft">{info.blurb}</p>
+      <form onSubmit={play} className="sticky top-0 z-10 -mx-4 border-y border-line bg-page/95 px-4 py-3 backdrop-blur md:-mx-8 md:px-8">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+          <Picker label="Left" value={agents[0]} onChange={(id) => setAgent(0, id)} agents={info.agents} />
+          <span aria-hidden className="text-micro font-extrabold text-ink-soft">vs</span>
+          <Picker label="Right" value={agents[1]} onChange={(id) => setAgent(1, id)} agents={info.agents} />
 
-      <form onSubmit={play} className="mt-5 flex flex-wrap items-end gap-x-6 gap-y-4 border-y border-line py-5">
-        <Field label="Left model"><AgentSelect agents={info.agents} value={agents[0]} onChange={(id) => setAgent(0, id)} /></Field>
-        <Field label="Right model"><AgentSelect agents={info.agents} value={agents[1]} onChange={(id) => setAgent(1, id)} /></Field>
-        <Field label="Scenario">
-          {STATIC_SITE ? (
-            <select
-              value={seedToPlay ?? ""} disabled={!recorded.length}
-              onChange={(e) => setSeed(Number(e.target.value))}
-              className="h-11 rounded-md border-2 border-line bg-surface px-3 text-base text-ink disabled:text-ink-soft"
-            >
-              {recorded.length ? recorded.map((s) => <option key={s} value={s}>{s}</option>) : <option>None recorded</option>}
-            </select>
-          ) : (
-            <input
-              type="number" min={0} step={1} value={seed}
-              onChange={(e) => setSeed(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-              className="h-11 w-24 rounded-md border-2 border-line bg-surface px-3 text-base text-ink"
+          <Picker
+            label="Scenario"
+            value={String(seedToPlay ?? "")}
+            onChange={(v) => setSeed(Number(v))}
+            agents={(STATIC_SITE ? recorded : Array.from({ length: 20 }, (_, i) => i)).map((s) => ({ id: String(s), name: `#${s}` }))}
+            disabled={STATIC_SITE && !recorded.length}
+          />
+          <Picker
+            label="Speed"
+            value={String(speed)}
+            onChange={(v) => setSpeed(Number(v))}
+            agents={[{ id: "1", name: "Real time" }, { id: "2", name: "2×" }, { id: "4", name: "4×" }]}
+          />
+          {!STATIC_SITE && (
+            <Picker
+              label="Source"
+              value={source}
+              onChange={(v) => setSource(v as Source)}
+              agents={[{ id: "live", name: "Live" }, { id: "recording", name: "Recording" }]}
             />
           )}
-        </Field>
-        {STATIC_SITE ? (
-          <p className="max-w-[34ch] self-center text-sm text-ink-soft">
-            Recorded games: this site cannot run a model.{" "}
-            <a href="#run-it" className="font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">Run the arena yourself</a>{" "}
-            to watch them play live.
-          </p>
-        ) : (
-        <fieldset className="grid gap-1.5">
-          <legend className="mb-1.5 text-sm text-ink-soft">Source</legend>
-          <div className="flex h-11 rounded-md border-2 border-line bg-surface p-0.5">
-            {(["live", "recording"] as const).map((s) => (
-              <label
-                key={s}
-                className={`flex cursor-pointer items-center rounded px-3.5 text-base has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-marking ${
-                  source === s ? "bg-accent font-extrabold text-accent-ink" : "text-ink"
-                }`}
-              >
-                <input type="radio" name="source" value={s} checked={source === s} onChange={() => setSource(s)} className="sr-only" />
-                {s === "live" ? "Live" : "Recording"}
-              </label>
-            ))}
+
+          <label className="flex cursor-pointer items-center gap-2 text-micro font-semibold text-ink-soft hover:text-ink">
+            <input type="checkbox" checked={raw} onChange={(e) => setRaw(e.target.checked)} className="size-4 accent-[var(--accent)]" />
+            Raw view
+          </label>
+
+          <div className="ml-auto flex items-center gap-3">
+            {stale && <span className="text-micro font-semibold text-ink">Press play to load it</span>}
+            <button
+              type="submit"
+              disabled={STATIC_SITE && !recorded.length}
+              className="flex h-10 items-center gap-2 bg-accent px-6 text-body font-extrabold text-accent-ink transition-transform active:translate-y-px disabled:opacity-50"
+            >
+              <Play size={16} weight="fill" aria-hidden />
+              {playing ? "Play again" : "Play"}
+            </button>
           </div>
-        </fieldset>
-        )}
-        <label className="flex h-11 cursor-pointer items-center gap-2 self-end rounded-md border-2 border-line bg-surface px-3.5 text-base has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-marking">
-          <input type="checkbox" checked={raw} onChange={(e) => setRaw(e.target.checked)} className="size-4 accent-[var(--accent)]" />
-          Raw view
-        </label>
-        <Field label="Playback">
-          <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="h-11 rounded-md border-2 border-line bg-surface px-3 text-base text-ink">
-            <option value={1}>Real time</option>
-            <option value={2}>2x</option>
-            <option value={4}>4x</option>
-          </select>
-        </Field>
-        {stale && <p className="self-center text-sm font-semibold text-ink">Press Play to load it</p>}
-        <button
-          type="submit"
-          disabled={STATIC_SITE && !recorded.length}
-          className="flex h-11 disabled:opacity-50 items-center gap-2 rounded-md bg-accent px-6 text-base font-extrabold text-accent-ink transition-transform active:scale-[0.98] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-marking"
-        >
-          <Play size={18} weight="fill" aria-hidden />
-          {playing ? "Play again" : "Play"}
-        </button>
+        </div>
       </form>
 
-      <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-12">
+      <p className="py-4 text-micro text-ink-soft">
+        {info.blurb} Scenario #{seedToPlay ?? 0} gives both models the same {SCENARIO_WORD[game]}.
+        {STATIC_SITE && <> These are recordings: <a href="#run-it" className="font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">run the arena yourself</a> to watch live.</>}
+      </p>
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-10">
         <div className="order-2 lg:order-1">
-          <ModelPanel game={game} agent={agentInfo(agents[0])} view={views[0]} align="left" rawUrl={rawUrl(0)} raw={raw} />
+          <ModelPanel game={game} agent={agentInfo(agents[0])} view={views[0]} align="left" />
         </div>
 
-        <div className="order-1 grid justify-items-center gap-3 lg:order-2">
-          <p className="text-sm text-ink-soft">
-            {playing
-              ? `Scenario ${playing.seed}: both models get the same ${SCENARIO_WORD[playing.game]}`
-              : `Scenario ${seedToPlay ?? 0}: both models get the same ${SCENARIO_WORD[game]}`}
-          </p>
-          <div className="flex justify-center gap-4">
+        <div className="order-1 flex justify-center gap-5 lg:order-2">
           {SIDES.map((i) => (
             <figure key={i} className="grid content-start justify-items-center gap-2">
-              <figcaption className="text-base font-extrabold">{agentInfo(agents[i]).name}</figcaption>
+              <figcaption className="text-micro font-semibold text-ink-soft">{names[i]}</figcaption>
               {DRAW[game] ? (
                 <canvas
                   key={game}
                   ref={(el) => { canvases.current[i] = el; }}
-                  className={`${BOARD_CLASS[game]} rounded-md`}
+                  className={BOARD_CLASS[game]}
                   role="img"
-                  aria-label={`${info.name} played by ${agentInfo(agents[i]).name}. Yellow is the model's ${game === "snake" ? "snake head" : "car"}.`}
+                  aria-label={`${info.name} played by ${names[i]}. The yellow piece is this model's.`}
                 />
               ) : (
                 <BlackjackBoard step={views[i].step} start={views[i].startFrame} />
               )}
-              <dl className="grid w-full grid-cols-2 gap-2 text-center">
+              <dl className="mt-1 grid w-full grid-cols-2 gap-2 border-t border-line pt-2 text-center">
                 {info.stats(views[i].step, views[i].end).map((s) => (
                   <div key={s.label}>
-                    <dt className="text-xs text-ink-soft">{s.label}</dt>
-                    <dd className={`text-lg font-extrabold ${s.danger ? "text-danger" : ""}`}>{s.value}</dd>
+                    <dt className="text-micro text-ink-soft">{s.label}</dt>
+                    <dd className={`numeric text-body font-extrabold ${s.danger ? "text-danger" : ""}`}>{s.value}</dd>
                   </div>
                 ))}
               </dl>
             </figure>
           ))}
-          </div>
         </div>
 
         <div className="order-3">
-          <ModelPanel game={game} agent={agentInfo(agents[1])} view={views[1]} align="right" rawUrl={rawUrl(1)} raw={raw} />
+          <ModelPanel game={game} agent={agentInfo(agents[1])} view={views[1]} align="right" />
         </div>
       </div>
 
+      {raw && <Inspector names={names} views={views} />}
       {STATIC_SITE && <RunItYourself />}
     </main>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Picker({ label, value, onChange, agents, disabled }: {
+  label: string; value: string; onChange: (id: string) => void;
+  agents: { id: string; name: string }[]; disabled?: boolean;
+}) {
   return (
-    <label className="grid gap-1.5">
-      <span className="text-sm text-ink-soft">{label}</span>
-      {children}
+    <label className="grid gap-1">
+      <span className="text-micro text-ink-soft">{label}</span>
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 border-b-2 border-line-strong bg-transparent pr-6 text-body font-semibold text-ink disabled:text-ink-soft"
+      >
+        {agents.length ? agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>) : <option>None recorded</option>}
+      </select>
     </label>
-  );
-}
-
-function AgentSelect({ agents, value, onChange }: { agents: { id: string; name: string }[]; value: string; onChange: (id: string) => void }) {
-  return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className="h-11 rounded-md border-2 border-line bg-surface px-3 text-base text-ink">
-      {agents.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-    </select>
   );
 }

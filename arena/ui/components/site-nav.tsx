@@ -15,7 +15,7 @@ export function SiteNav() {
   const active = (href: string) => (href === "/" ? path === "/" : path.startsWith(href.replace(/\/$/, "")));
   return (
     <header className="border-b border-line">
-      <nav aria-label="Site" className="mx-auto flex h-16 max-w-[1400px] items-center gap-6 px-4 md:px-8">
+      <nav aria-label="Site" className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 sm:gap-6 md:px-8">
         {/* prefetch off: static export writes segment files where this Next version does not look, so prefetches 404 */}
         <Link href="/" prefetch={false} className="mr-auto text-lg font-extrabold tracking-tight">Decision Arena</Link>
         {LINKS.map(({ href, label }) => (
@@ -24,7 +24,7 @@ export function SiteNav() {
             href={href}
             prefetch={false}
             aria-current={active(href) ? "page" : undefined}
-            className={`py-1 text-base font-semibold underline-offset-8 focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-marking ${
+            className={`py-1 text-micro font-semibold underline-offset-8 sm:text-body focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-marking ${
               active(href) ? "text-ink underline decoration-accent decoration-[3px]" : "text-ink-soft hover:text-ink"
             }`}
           >
