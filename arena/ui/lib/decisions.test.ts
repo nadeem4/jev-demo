@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareBars, decisionRows, questionsOf, standing } from "./decisions";
+import { compareBars, decisionRows, optionShares, questionsOf, standing } from "./decisions";
 import type { EndEvent, StartEvent, StepEvent } from "./types";
 import { EMPTY_VIEW } from "./views";
 
@@ -87,6 +87,38 @@ describe("compareBars", () => {
 
   it("never draws a negative bar", () => {
     expect(compareBars([-5, 10])[0].fraction).toBe(0);
+  });
+});
+
+describe("optionShares", () => {
+  const OPTIONS = [{ id: "LANE_LEFT" }, { id: "IDLE" }, { id: "FASTER" }];
+
+  it("keeps every option the game offers, in the game's order, with the played one marked", () => {
+    const shares = optionShares(OPTIONS, step(3, "IDLE", { LANE_LEFT: 0.1, IDLE: 0.7, FASTER: 0.2 }));
+    expect(shares).toEqual([
+      { id: "LANE_LEFT", probability: 0.1, played: false },
+      { id: "IDLE", probability: 0.7, played: true },
+      { id: "FASTER", probability: 0.2, played: false },
+    ]);
+  });
+
+  it("still lists an option the model gave no probability, rather than dropping it", () => {
+    const shares = optionShares(OPTIONS, step(3, "IDLE", { IDLE: 1 }));
+    expect(shares.map((s) => s.id)).toEqual(["LANE_LEFT", "IDLE", "FASTER"]);
+    expect(shares[0].probability).toBeNull();
+  });
+
+  it("still marks the move the game played when the call failed and no answer came back", () => {
+    const failed = step(3, "IDLE", {}, { answers: undefined, error: "timeout" });
+    expect(optionShares(OPTIONS, failed)).toEqual([
+      { id: "LANE_LEFT", probability: null, played: false },
+      { id: "IDLE", probability: null, played: true },
+      { id: "FASTER", probability: null, played: false },
+    ]);
+  });
+
+  it("has nothing to show before a decision", () => {
+    expect(optionShares(OPTIONS, null)).toEqual([]);
   });
 });
 

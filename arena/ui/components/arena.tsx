@@ -24,9 +24,10 @@ const DRAW: Partial<Record<GameId, (c: HTMLCanvasElement, v: FrameView | null, e
   highway: drawHighway,
   snake: (c, v) => drawSnake(c, v),
 };
+// Both boards are on screen at once, in the narrower left column, so they stay compact.
 const BOARD_CLASS: Partial<Record<GameId, string>> = {
-  highway: "h-[120px] w-full lg:h-[160px]",
-  snake: "aspect-square w-[min(62vw,300px)]",
+  highway: "h-[110px] w-full lg:h-[132px]",
+  snake: "aspect-square w-[min(62vw,224px)]",
 };
 const SCENARIO_WORD: Record<GameId, string> = { highway: "traffic", snake: "food layout", blackjack: "deck" };
 
@@ -38,8 +39,6 @@ function viewOf(p: Playback): PanelView {
 export function Arena() {
   const [game, setGame] = useState<GameId>("highway");
   const [agents, setAgents] = useState<[string, string]>(["jev", "laya"]);
-  /** Which model is on screen. Both play underneath; the tab only picks what is shown. */
-  const [tab, setTab] = useState<0 | 1>(0);
   const [seed, setSeed] = useState(4);
   const [source, setSource] = useState<Source>(STATIC_SITE ? "recording" : "live");
   const [speed, setSpeed] = useState(1);
@@ -190,7 +189,7 @@ export function Arena() {
         <div>
           <h1 className="text-h1 font-extrabold leading-[0.95] tracking-tight">Watch them decide</h1>
           <p className="mt-3 max-w-[54ch] text-lead leading-relaxed text-ink-soft">
-            Two decision models, the same game, the same situations, no training. Each plays its own game, so you watch one at a time — flip between them at the same decision.
+            Two decision models, the same game, the same situations, no training. Both play at once, side by side, and every option each one weighed is on the page.
           </p>
         </div>
         <nav aria-label="Games" className="flex flex-wrap gap-1.5 md:justify-end">
@@ -269,7 +268,7 @@ export function Arena() {
 
       <p className="flex flex-wrap items-baseline gap-x-3 py-4 text-micro text-ink-soft">
         <span>
-          {info.blurb} Scenario #{seedToPlay ?? 0} gives both models the same {SCENARIO_WORD[game]}.
+          {info.blurb} Scenario #{seedToPlay ?? 0} gives both models the same {SCENARIO_WORD[game]}; each runs its own episode, so they never meet.
           {STATIC_SITE && <> These are recordings: <a href="#run-it" className="font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">run the arena yourself</a> to watch live.</>}
         </span>
         {pinned !== null && (
@@ -282,73 +281,64 @@ export function Arena() {
         )}
       </p>
 
-      <div className="grid min-w-0 gap-6">
-        <nav aria-label="Models" className="flex flex-wrap gap-1.5">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(380px,420px)_minmax(0,1fr)] lg:items-start lg:gap-10">
+        <div className="grid content-start gap-6">
           {SIDES.map((i) => (
-            <button
-              key={names[i] + i}
-              type="button"
-              onClick={() => setTab(i)}
-              aria-pressed={tab === i}
-              className={`h-10 px-5 text-body font-extrabold transition-colors ${
-                tab === i ? "bg-ink text-page" : "bg-surface text-ink-soft hover:text-ink"
-              }`}
-            >
-              {names[i]}
-            </button>
-          ))}
-          <p className="flex items-center text-micro text-ink-soft md:ml-2">
-            Each model runs its own {SCENARIO_WORD[game]} from the same scenario; they never meet. Switching keeps the decision you are on.
-          </p>
-        </nav>
-
-        <section aria-labelledby="compare-title" className="border border-line bg-surface px-4 py-3">
-          <h2 id="compare-title" className="text-micro text-ink-soft">{info.measure.label}, both models on one scale</h2>
-          <dl className="mt-2 grid gap-x-8 gap-y-3 sm:grid-cols-2">
-            {bars.map((bar, i) => (
-              <div key={names[i] + i} className="grid min-w-0 gap-1">
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="min-w-0 truncate text-micro font-semibold text-ink">
-                    {names[i]} <span className="font-normal text-ink-soft">· {standing(game, views[i])}</span>
-                  </dt>
-                  <dd className="numeric shrink-0 text-body font-extrabold">{bar.value === null ? "–" : info.measure.format(bar.value)}</dd>
-                </div>
-                <div className="h-[6px] bg-sunk" aria-hidden>
-                  <div className="h-full bg-accent" style={{ width: `${Math.round(bar.fraction * 100)}%` }} />
-                </div>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        <ModelBand
-          game={game}
-          agent={infos[tab]}
-          view={views[tab]}
-          board={DRAW[game] ? (
-            <canvas
-              key={game + tab}
-              ref={(el) => {
-                canvases.current[tab] = el;
-                return () => { canvases.current[tab] = null; };
-              }}
-              className={BOARD_CLASS[game]}
-              role="img"
-              aria-label={`${info.name} played by ${names[tab]}. The yellow piece is this model's.`}
+            <ModelBand
+              key={infos[i].id + i}
+              game={game}
+              agent={infos[i]}
+              view={views[i]}
+              board={DRAW[game] ? (
+                <canvas
+                  key={game + i}
+                  ref={(el) => {
+                    canvases.current[i] = el;
+                    return () => { canvases.current[i] = null; };
+                  }}
+                  className={BOARD_CLASS[game]}
+                  role="img"
+                  aria-label={`${info.name} played by ${names[i]}. The yellow piece is this model's.`}
+                />
+              ) : (
+                <BlackjackBoard step={views[i].step} start={views[i].startFrame} />
+              )}
             />
-          ) : (
-            <BlackjackBoard step={views[tab].step} start={views[tab].startFrame} />
-          )}
-        />
+          ))}
 
-        <Exchange
-          name={names[tab]}
-          step={views[tab].step}
-          questions={questionsOf(views[tab].start)}
-          waitingFor={views[tab].failed ?? (views[tab].started ? views[tab].status || "Starting…" : "Press Play to see the wire.")}
-        />
+          <section aria-labelledby="compare-title" className="border-t-2 border-line-strong pt-4">
+            <h2 id="compare-title" className="text-micro text-ink-soft">{info.measure.label}, both models on one scale</h2>
+            <dl className="mt-3 grid gap-3">
+              {bars.map((bar, i) => (
+                <div key={names[i] + i} className="grid min-w-0 gap-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <dt className="min-w-0 truncate text-micro font-semibold text-ink">
+                      {names[i]} <span className="font-normal text-ink-soft">· {standing(game, views[i])}</span>
+                    </dt>
+                    <dd className="numeric shrink-0 text-body font-extrabold">{bar.value === null ? "–" : info.measure.format(bar.value)}</dd>
+                  </div>
+                  <div className="h-[8px] bg-sunk" aria-hidden>
+                    <div className="h-full bg-accent" style={{ width: `${Math.round(bar.fraction * 100)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </div>
 
-        <DecisionList game={game} names={names} rows={rows} selected={pinned} onSelect={(t) => { setPaused(true); setPinned(t); }} />
+        <div className="grid min-w-0 content-start gap-6">
+          {SIDES.map((i) => (
+            <Exchange
+              key={names[i] + i}
+              game={game}
+              name={names[i]}
+              step={views[i].step}
+              questions={questionsOf(views[i].start)}
+              waitingFor={views[i].failed ?? (views[i].started ? views[i].status || "Starting…" : "Press Play to see the wire.")}
+            />
+          ))}
+          <DecisionList game={game} names={names} rows={rows} selected={pinned} onSelect={(t) => { setPaused(true); setPinned(t); }} />
+        </div>
       </div>
 
       {STATIC_SITE && <RunItYourself />}

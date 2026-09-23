@@ -26,6 +26,20 @@ export function decisionRows(game: GameId, histories: StepEvent[][]): DecisionRo
   return ts.map((t) => ({ t, cells: histories.map((h) => cellFor(game, h.find((s) => s.t === t))) }));
 }
 
+export interface OptionShare {
+  id: string;
+  /** What the model gave this option, or null when it scored no probability for it. */
+  probability: number | null;
+  played: boolean;
+}
+
+/** Every option the game offers, in the game's order, so none of them can go missing. */
+export function optionShares(options: { id: string }[], step: StepEvent | null): OptionShare[] {
+  if (!step) return [];
+  const probs = step.answers?.action?.probabilities ?? {};
+  return options.map(({ id }) => ({ id, probability: probs[id] ?? null, played: step.action === id }));
+}
+
 export interface RequestQuestions {
   /** The `questions` object itself, exactly as recorded. */
   body: unknown;
