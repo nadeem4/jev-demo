@@ -172,7 +172,8 @@ export const JEV: Model = {
     bullets: [
       { lead: "Highway:", claims: [{ text: "survived all 40 seconds, every episode. No crashes.", from: "measured" }] },
       { lead: "Blackjack:", claims: [{ text: "matched basic strategy on 77% of decisions (95% CI 73 to 81).", from: "measured" }] },
-      { lead: "Snake:", claims: [{ text: "ate 1.8 food per episode, against 17.3 for a 15-line greedy script.", from: "measured" }] },
+      { lead: "Snake:", claims: [{ text: "ate 1.8 food per episode, against 17.3 for a greedy script of about twenty lines that reads the same state description it does.", from: "measured" }] },
+      { lead: "Confidence:", claims: [{ text: "it understates itself. Average stated confidence 0.66 in blackjack against 77% accuracy, so it is about 11 points more right than it claims to be.", from: "measured" }] },
       { lead: "Reading the situation:", claims: [{ text: "its answers moved substantially between opposite situations, which is the test for whether it is reading the state at all rather than answering from habit.", from: "measured" }] },
       { lead: "Caution:", claims: [{ text: "it kept its lane on 94% of highway decisions and drove near the minimum allowed speed. In Snake it circled rather than dying.", from: "measured" }] },
     ],
@@ -266,7 +267,7 @@ export const LAYA: Model = {
     bullets: [
       { lead: "Blackjack:", claims: [{ text: "chose stick on all 200 decisions, scoring exactly like an always-stick baseline. Matched basic strategy 49.5% of the time, which is what you get by not deciding.", from: "measured" }] },
       { lead: "Highway:", claims: [{ text: "64% of its moves were lane changes into a lane that did not exist. Average survival 18.1 seconds against Jev's 40.", from: "measured" }] },
-      { lead: "Confidence runs backwards:", claims: [{ text: "when it claimed 80 to 90%, it was right about 55% of the time; when it claimed 90 to 100%, about a third.", from: "measured" }] },
+      { lead: "Confidence carries almost no information:", claims: [{ text: "across 200 blackjack decisions it never stated below 70%, averaging 0.81 while being right 49.5% of the time. That is roughly 31 points of overconfidence. Its bins do not run cleanly backwards, which an earlier version of this page claimed: they read 42.7% right at a stated 70 to 80%, 55.2% at 80 to 90%, and 33.3% at 90 to 100%, and that last bucket holds nine decisions.", from: "measured" }] },
     ],
     note: [
       { lead: "The fairness note.", claims: [
