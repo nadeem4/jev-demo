@@ -18,6 +18,8 @@ export interface GameInfo {
   stateLabels: Record<string, string>;
   stats: (step: StepEvent | null, end: EndEvent | null) => Stat[];
   results: ResultMetric[];
+  /** Agents that define the deciding metric rather than compete on it (blackjack's basic strategy). */
+  defines?: string[];
 }
 
 const MODELS: AgentInfo[] = [
@@ -105,6 +107,7 @@ export const GAMES: Record<GameId, GameInfo> = {
         { label: "Net", value: f ? (f.net > 0 ? `+${f.net}` : String(f.net)) : "-", danger: Boolean(f && f.net < 0) },
       ];
     },
+    defines: ["basic-strategy"],
     results: [
       { key: "basic_strategy_match", label: "Matches basic strategy", kind: "mean", better: "higher", percent: true },
       { key: "return_per_hand", label: "Return per hand", kind: "mean", better: "higher" },

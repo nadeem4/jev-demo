@@ -17,7 +17,7 @@ const TONE_CLASS: Record<Tone, string> = {
 };
 
 
-export function ModelPanel({ game, agent, view, align }: { game: GameId; agent: AgentInfo; view: PanelView; align: "left" | "right" }) {
+export function ModelPanel({ game, agent, view, align, rawUrl }: { game: GameId; agent: AgentInfo; view: PanelView; align: "left" | "right"; rawUrl?: string | null }) {
   const reduce = useReducedMotion();
   const info = GAMES[game];
   const { step, end, failed } = view;
@@ -99,6 +99,13 @@ export function ModelPanel({ game, agent, view, align }: { game: GameId; agent: 
           </p>
         )}
         {end && <p className="mt-2 text-sm font-semibold"><EndLine game={game} end={end} /></p>}
+        {rawUrl && (
+          <p className="mt-3 text-sm">
+            <a href={rawUrl} target="_blank" rel="noreferrer" className="text-ink-soft underline decoration-accent decoration-2 underline-offset-4 hover:text-ink">
+              Raw JSON: every situation, answer and probability in this game
+            </a>
+          </p>
+        )}
       </div>
     </section>
   );

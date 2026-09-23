@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { STATIC_SITE, urls } from "@/lib/api";
 import { GAMES, GAME_IDS, agentName, type ResultMetric } from "@/lib/games";
+import { verdict } from "@/lib/verdict";
 import type { GameId } from "@/lib/types";
 
 interface Metric { rate?: number; mean?: number; ci95: [number | null, number | null] }
@@ -56,9 +58,42 @@ export function Results() {
       )}
 
       {runs && GAME_IDS.filter((g) => runs[g]?.length).map((g) => <GameResults key={g} run={runs[g]![0]} older={runs[g]!.length - 1} />)}
+
+      {runs && (
+        <p className="mt-12 max-w-[70ch] text-ink-soft">
+          Every number here comes from recorded games. Each one is a JSON file holding every situation the model
+          read, every probability it returned and the move it took: open one from the{" "}
+          <Link href="/" prefetch={false} className="font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">Arena</Link>{" "}
+          after playing a recording, or browse them all in{" "}
+          <a href="https://github.com/nadeem4/jev-demo/tree/main/arena/ui/public/data/runs" className="font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">the repository</a>.
+        </p>
+      )}
     </main>
   );
 }
+
+function Verdict({ run, game }: { run: Run; game: GameId }) {
+  const v = verdict(game, run);
+  if (!v) return null;
+  const name = (id: string) => agentName(game, id);
+
+  if (v.tied) {
+    return (
+      <p className="mt-4 text-lg">
+        <b>{v.tied.map(name).join(" and ")} tie on {game}</b>, both at {v.value} {v.metric}.
+      </p>
+    );
+  }
+  return (
+    <p className="mt-4 text-lg">
+      <b>{name(v.winner)} wins{v.winnerIsModel ? "" : ", and it is a baseline"}</b>: {v.value} {v.metric}.
+      {!v.winnerIsModel && v.bestModel && (
+        <> The best model is {name(v.bestModel)}, at {v.bestModelValue}.</>
+      )}
+    </p>
+  );
+}
+
 
 function GameResults({ run, older }: { run: Run; older: number }) {
   const info = GAMES[run.game];
@@ -77,6 +112,8 @@ function GameResults({ run, older }: { run: Run; older: number }) {
         {run.models.laya && <> Laya {run.models.laya.checkpoint} checkpoint on {run.models.laya.device.toUpperCase()}.</>}
         {older > 0 && <> {older} earlier run{older > 1 ? "s" : ""} saved.</>}
       </p>
+
+      <Verdict run={run} game={run.game} />
 
       <div className="mt-5 overflow-x-auto">
         <table className="w-full min-w-[720px] border-collapse text-left">

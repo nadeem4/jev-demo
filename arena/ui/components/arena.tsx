@@ -135,6 +135,8 @@ export function Arena() {
   }
 
   const setAgent = (i: 0 | 1, id: string) => setAgents((a) => (i === 0 ? [id, a[1]] : [a[0], id]));
+  // The recording being replayed is a plain JSON file: link it so anyone can read the raw decisions.
+  const rawUrl = (i: 0 | 1) => (views[i].step && source === "recording" ? urls.run(game, agents[i], seedToPlay) : null);
   const agentInfo = (id: string) => info.agents.find((a) => a.id === id) ?? info.agents[0];
 
   return (
@@ -226,7 +228,7 @@ export function Arena() {
 
       <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-12">
         <div className="order-2 lg:order-1">
-          <ModelPanel game={game} agent={agentInfo(agents[0])} view={views[0]} align="left" />
+          <ModelPanel game={game} agent={agentInfo(agents[0])} view={views[0]} align="left" rawUrl={rawUrl(0)} />
         </div>
 
         <div className="order-1 flex justify-center gap-4 lg:order-2">
@@ -257,7 +259,7 @@ export function Arena() {
         </div>
 
         <div className="order-3">
-          <ModelPanel game={game} agent={agentInfo(agents[1])} view={views[1]} align="right" />
+          <ModelPanel game={game} agent={agentInfo(agents[1])} view={views[1]} align="right" rawUrl={rawUrl(1)} />
         </div>
       </div>
 
