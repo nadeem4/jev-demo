@@ -43,6 +43,7 @@ export function Arena() {
   const [source, setSource] = useState<Source>(STATIC_SITE ? "recording" : "live");
   const [runsIndex, setRunsIndex] = useState<RunsIndex>({});
   const [speed, setSpeed] = useState(1);
+  const [raw, setRaw] = useState(false);
   const [playing, setPlaying] = useState<{ game: GameId; agents: [string, string]; seed: number } | null>(null);
   const [tagged, setTagged] = useState<TaggedViews>(() => ({ game: "highway", views: SIDES.map(() => viewOf(new Playback())) }));
 
@@ -216,6 +217,10 @@ export function Arena() {
           </div>
         </fieldset>
         )}
+        <label className="flex h-11 cursor-pointer items-center gap-2 self-end rounded-md border-2 border-line bg-surface px-3.5 text-base has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-marking">
+          <input type="checkbox" checked={raw} onChange={(e) => setRaw(e.target.checked)} className="size-4 accent-[var(--accent)]" />
+          Raw view
+        </label>
         <Field label="Playback">
           <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="h-11 rounded-md border-2 border-line bg-surface px-3 text-base text-ink">
             <option value={1}>Real time</option>
@@ -236,7 +241,7 @@ export function Arena() {
 
       <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-12">
         <div className="order-2 lg:order-1">
-          <ModelPanel game={game} agent={agentInfo(agents[0])} view={views[0]} align="left" rawUrl={rawUrl(0)} />
+          <ModelPanel game={game} agent={agentInfo(agents[0])} view={views[0]} align="left" rawUrl={rawUrl(0)} raw={raw} />
         </div>
 
         <div className="order-1 grid justify-items-center gap-3 lg:order-2">
@@ -274,7 +279,7 @@ export function Arena() {
         </div>
 
         <div className="order-3">
-          <ModelPanel game={game} agent={agentInfo(agents[1])} view={views[1]} align="right" rawUrl={rawUrl(1)} />
+          <ModelPanel game={game} agent={agentInfo(agents[1])} view={views[1]} align="right" rawUrl={rawUrl(1)} raw={raw} />
         </div>
       </div>
 

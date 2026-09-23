@@ -5,13 +5,15 @@ import type { StartEvent, StepEvent } from "@/lib/types";
 
 /** The request that produced a decision, exactly as the model received it. */
 export function requestFor(start: StartEvent | null, step: StepEvent) {
-  return { model: start?.agent ?? "model", state: step.state, questions: start?.questions ?? "(not recorded)" };
+  return { state: step.state, questions: start?.questions ?? "(not recorded)" };
 }
 
 const json = (value: unknown) => JSON.stringify(value, null, 2);
 
 export function RawDecision({ start, step, open = false }: { start: StartEvent | null; step: StepEvent; open?: boolean }) {
-  const [show, setShow] = useState(open);
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const show = toggled ?? open;
+  const setShow = (next: boolean) => setToggled(next);
   const answer = step.answers?.action;
   const chosen = answer?.probabilities?.[step.action];
 
@@ -19,7 +21,7 @@ export function RawDecision({ start, step, open = false }: { start: StartEvent |
     <div className="mt-4 border-t border-line pt-3">
       <button
         type="button"
-        onClick={() => setShow((s) => !s)}
+        onClick={() => setShow(!show)}
         aria-expanded={show}
         className="text-sm font-semibold text-ink-soft underline decoration-accent decoration-2 underline-offset-4 hover:text-ink focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-marking"
       >
