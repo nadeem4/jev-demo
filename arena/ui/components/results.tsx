@@ -77,18 +77,16 @@ function Verdict({ run, game }: { run: Run; game: GameId }) {
   if (!v) return null;
   const name = (id: string) => agentName(game, id);
 
-  if (v.tied) {
-    return (
-      <p className="mt-4 text-lg">
-        <b>{v.tied.map(name).join(" and ")} tie on {game}</b>, both at {v.value} {v.metric}.
-      </p>
-    );
-  }
   return (
     <p className="mt-4 text-lg">
-      <b>{name(v.winner)} wins{v.winnerIsModel ? "" : ", and it is a baseline"}</b>: {v.value} {v.metric}.
-      {!v.winnerIsModel && v.bestModel && (
-        <> The best model is {name(v.bestModel)}, at {v.bestModelValue}.</>
+      {v.tied
+        ? <b>{v.tied.map(name).join(" and ")} tie at {v.value} {v.metric}.</b>
+        : <b>{name(v.winner)} wins: {v.value} {v.metric}.</b>}
+      {v.reference && (
+        <span className="text-ink-soft">
+          {" "}For reference, the best baseline ({name(v.reference.id)}) scored {v.reference.value}
+          {v.reference.beatsWinner ? ", better than either model" : ""}.
+        </span>
       )}
     </p>
   );

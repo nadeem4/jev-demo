@@ -14,12 +14,16 @@ describe("verdict", () => {
     expect(v.value).toBe("0%");
   });
 
-  it("says when a baseline beat both models, and which model did best", () => {
+  it("picks the winner among the models, and keeps the best baseline as a reference", () => {
     const v = verdict("snake", run({ jev: 1.8, laya: 0.5, greedy: 17.3, random: 0.2 }, "food_eaten", "mean"))!;
-    expect(v.winner).toBe("greedy");
-    expect(v.winnerIsModel).toBe(false);
-    expect(v.bestModel).toBe("jev");
-    expect(v.bestModelValue).toBe("1.8");
+    expect(v.winner).toBe("jev");
+    expect(v.value).toBe("1.8");
+    expect(v.reference).toEqual({ id: "greedy", value: "17.3", beatsWinner: true });
+  });
+
+  it("says when the models beat every baseline", () => {
+    const v = verdict("highway", run({ jev: 0, laya: 0.9, idle: 0.9, random: 1 }))!;
+    expect(v.reference).toEqual({ id: "idle", value: "90%", beatsWinner: false });
   });
 
   it("reports a tie when the top two are level", () => {
@@ -34,6 +38,6 @@ describe("verdict", () => {
   it("ignores an agent that defines the metric, like blackjack's basic strategy", () => {
     const v = verdict("blackjack", run({ jev: 0.77, laya: 0.5, "basic-strategy": 1, random: 0.49 }, "basic_strategy_match", "mean"))!;
     expect(v.winner).toBe("jev");
-    expect(v.winnerIsModel).toBe(true);
+    expect(v.reference?.id).toBe("random");
   });
 });
