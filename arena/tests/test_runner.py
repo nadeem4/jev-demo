@@ -101,3 +101,9 @@ def test_decisions_inside_the_deadline_are_used():
 def test_without_a_deadline_slow_answers_still_count():
     step = run(Slow("LANE_LEFT"), max_steps=1)[1]
     assert step["action"] == "LANE_LEFT"
+
+
+def test_start_includes_the_questions_so_the_request_can_be_shown():
+    start = run(ConstantAgent("IDLE"))[0]
+    assert start["questions"]["action"]["type"] == "choice"
+    assert list(start["questions"]["action"]["criteria"]) == start["options"]

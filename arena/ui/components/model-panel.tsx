@@ -1,6 +1,7 @@
 "use client";
 
 import { WarningCircle } from "@phosphor-icons/react";
+import { RawDecision } from "./raw-decision";
 import { motion, useReducedMotion } from "motion/react";
 import { GAMES, type AgentInfo } from "@/lib/games";
 import { concerns, tone, type Tone } from "@/lib/insights";
@@ -99,10 +100,11 @@ export function ModelPanel({ game, agent, view, align, rawUrl }: { game: GameId;
           </p>
         )}
         {end && <p className="mt-2 text-sm font-semibold"><EndLine game={game} end={end} /></p>}
+        {step && <RawDecision start={view.start} step={step} />}
         {rawUrl && (
           <p className="mt-3 text-sm">
             <a href={rawUrl} target="_blank" rel="noreferrer" className="text-ink-soft underline decoration-accent decoration-2 underline-offset-4 hover:text-ink">
-              Raw JSON: every situation, answer and probability in this game
+              Download this whole game as JSON
             </a>
           </p>
         )}

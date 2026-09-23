@@ -28,7 +28,7 @@ const BOARD_CLASS: Partial<Record<GameId, string>> = {
 
 // A side counts as started once Play gave it a status; before that it shows Ready.
 function viewOf(p: Playback): PanelView {
-  return { startFrame: p.start?.frame ?? null, step: p.current, end: p.end, failed: p.failed, status: p.status, waiting: p.waiting, started: p.status !== "" };
+  return { start: p.start, startFrame: p.start?.frame ?? null, step: p.current, end: p.end, failed: p.failed, status: p.status, waiting: p.waiting, started: p.status !== "" };
 }
 
 export function Arena() {

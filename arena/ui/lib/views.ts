@@ -1,7 +1,8 @@
-import type { AnyFrame, EndEvent, GameId, StepEvent } from "./types";
+import type { AnyFrame, EndEvent, GameId, StartEvent, StepEvent } from "./types";
 
 /** What one side's panel shows: the latest decision and how the episode is going. */
 export interface PanelView {
+  start: StartEvent | null;
   startFrame: AnyFrame | null;
   step: StepEvent | null;
   end: EndEvent | null;
@@ -12,7 +13,7 @@ export interface PanelView {
 }
 
 export const EMPTY_VIEW: PanelView = {
-  startFrame: null, step: null, end: null, failed: null, status: "", waiting: false, started: false,
+  start: null, startFrame: null, step: null, end: null, failed: null, status: "", waiting: false, started: false,
 };
 
 /** Views are tagged with the game they came from. Each game has its own frame shape,

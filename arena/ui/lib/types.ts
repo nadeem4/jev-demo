@@ -14,7 +14,7 @@ export type RoadState = Record<string, string>;
 export interface ChoiceAnswer { type: "choice"; choice?: string; probabilities: Record<string, number> }
 export type Answers = Record<string, ChoiceAnswer>;
 
-export interface StartEvent { type: "start"; game: GameId; agent: string; seed: number; options: string[]; frame: AnyFrame }
+export interface StartEvent { type: "start"; game: GameId; agent: string; seed: number; options: string[]; questions?: unknown; frame: AnyFrame }
 export interface StepEvent {
   type: "step"; t: number; state: RoadState; answers: Answers | null; action: string;
   latency_ms: number; frame: AnyFrame; error?: string; retries?: number;

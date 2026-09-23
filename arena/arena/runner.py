@@ -12,7 +12,7 @@ def run_episode(game_name, agent, seed, max_steps=None, deadline_ms=None):
     game = make_game(game_name)
     game.reset(seed)
     yield {"type": "start", "game": game.name, "agent": agent.name, "seed": seed,
-           "options": list(game.options), "frame": game.frame()}
+           "options": list(game.options), "questions": game.questions, "frame": game.frame()}
 
     steps, done = 0, False
     while not done and (max_steps is None or steps < max_steps):
