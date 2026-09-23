@@ -96,7 +96,7 @@ Terminology: an **episode** is one full game (a highway drive of up to 40 second
 
 ## Publish the site
 
-Live at **https://decision-arena-nine.vercel.app** (recordings, results and Learn; live play stays local).
+Live at **https://arena.codewithnk.com** (recordings, results and Learn; live play stays local).
 
 ```
 uv run python -m arena.export    # refresh ui/public/data from runs/ and results/
