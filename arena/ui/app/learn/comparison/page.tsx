@@ -1,100 +1,82 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LearnPage, Section, Source } from "@/components/learn-page";
+import { Answer, ClaimLine, LearnPage, Notes, Section, Sources } from "@/components/learn-page";
+import { JEV, LAYA, pairAnswers, type Model } from "@/lib/learn";
 
 export const metadata: Metadata = { title: "Jev and Laya side by side | Decision Arena" };
 
-const ROWS: [string, string, string][] = [
-  ["Made by", "TypeSafe AI, founded by Diogo Almeida (previously OpenAI)", "Convai Innovations"],
-  ["Released", "15 September 2026", "Days later, as an open answer to Jev"],
-  ["Access", "Paid API, directly or through Vercel AI Gateway", "Download the weights and run them"],
-  ["Weights", "Closed", "Open, Apache 2.0"],
-  ["Architecture", "Transformer-based, not an LLM; details unpublished", "Encoder (ModernBERT-large or mmBERT-base) with a decision head"],
-  ["Size", "Not published", "421M (English) or 322M (multilingual)"],
-  ["Input limit", "About 64,000 tokens, 32,000 for the state", "512 tokens (English), 1,024 (multilingual)"],
-  ["Options per choice", "Up to 255", "Best under about 20; options share a 192 to 256 token budget"],
-  ["Training", "RLCD, details unpublished", "RLCD, described in detail by its authors"],
-  ["Stated speed", "70 to 500 ms per request", "About 33 ms per question on a T4 GPU"],
-  ["Price", "$0.042 per million input tokens, output free", "Free; you pay for the hardware"],
-  ["Runs offline", "No", "Yes"],
-];
+const link = "font-semibold underline decoration-accent decoration-2 underline-offset-4";
 
 export default function Page() {
+  const pairs = pairAnswers(JEV, LAYA);
+  const sources = [...JEV.sources, ...LAYA.sources.filter((s) => !JEV.sources.some((j) => j.href === s.href))];
+
   return (
     <LearnPage
       title="Side by side"
-      intro="Same interface, opposite trade-offs: one is rented and closed, the other is owned and open."
-      checked="22 September 2026"
+      intro="The same six questions, the same answers as the two model pages, in two columns."
+      checked="23 September 2026"
     >
-      <section className="mt-12">
-        <h2 className="text-3xl font-extrabold tracking-tight">The specifications</h2>
-        <div className="mt-5 overflow-x-auto">
-          <table className="w-full min-w-[680px] border-collapse text-left">
-            <thead>
-              <tr className="border-b-2 border-line text-sm text-ink-soft">
-                <th className="py-2 pr-4 font-semibold" />
-                <th className="py-2 pr-4 text-base font-extrabold text-ink">Jev</th>
-                <th className="py-2 text-base font-extrabold text-ink">Laya</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ROWS.map(([label, jev, laya]) => (
-                <tr key={label} className="border-b border-line align-top">
-                  <th scope="row" className="py-3 pr-4 font-semibold text-ink-soft">{label}</th>
-                  <td className="py-3 pr-4">{jev}</td>
-                  <td className="py-3">{laya}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <Section title="How to read this">
+        <p>
+          Nothing here is written separately. Every answer below is the short answer from the{" "}
+          <Link href="/learn/jev/" prefetch={false} className={link}>Jev</Link> or{" "}
+          <Link href="/learn/laya/" prefetch={false} className={link}>Laya</Link> page, set beside its opposite number;
+          those pages carry the rest. Where a column is short, that is the finding: one of the two has published nothing.
+        </p>
+      </Section>
+
+      {pairs.map(({ question, jev, laya, unpublished }, i) => (
+        <section key={question.id} className="mt-14 border-t-2 border-line pt-6" aria-labelledby={`q-${question.id}`}>
+          <div className="flex items-baseline gap-3">
+            <span aria-hidden className="numeric text-h2 font-extrabold leading-none text-line-strong">{i + 1}</span>
+            <h2 id={`q-${question.id}`} className="max-w-[28ch] text-h3 font-extrabold tracking-tight">{question.title}</h2>
+          </div>
+
+          {unpublished && (
+            <p className="mt-3 max-w-[70ch] text-micro text-ink-soft">
+              {unpublished === "jev" ? "TypeSafe" : "Convai"} has published no answer to this one;{" "}
+              {unpublished === "jev" ? "Convai" : "TypeSafe"} has.
+            </p>
+          )}
+
+          <div className="mt-4 grid gap-px border border-line bg-line md:grid-cols-2">
+            <Column model={JEV}><Answer answer={jev} compact /></Column>
+            <Column model={LAYA}><Answer answer={laya} compact /></Column>
+          </div>
+        </section>
+      ))}
+
+      <section className="mt-14 border-t-2 border-line pt-6" aria-labelledby="measured">
+        <h2 id="measured" className="text-h3 font-extrabold tracking-tight">What we measured</h2>
+        <p className="mt-3 max-w-[70ch] text-body leading-relaxed">
+          Three games, the same seeds and the same text to both models, everything recorded. The per-metric table is on
+          the <Link href="/scorecard/" prefetch={false} className={link}>Scorecard</Link>, with the raw numbers on{" "}
+          <Link href="/results/" prefetch={false} className={link}>Results</Link>.
+        </p>
+        <div className="mt-4 grid gap-px border border-line bg-line md:grid-cols-2">
+          {[JEV, LAYA].map((model) => (
+            <Column key={model.id} model={model}>
+              <ClaimLine claim={model.measured.intro} className="text-micro text-ink-soft" />
+              <Notes notes={model.measured.bullets} className="mt-3 text-micro leading-relaxed" />
+              {model.measured.note && <Notes notes={model.measured.note} className="mt-4 text-micro leading-relaxed" />}
+            </Column>
+          ))}
         </div>
       </section>
 
-      <Section title="Claims, and who is making them">
-        <p>
-          Laya&apos;s README compares the two directly and reports Laya ahead on most classification sets, three times better
-          calibrated after temperature fitting, and roughly eight times faster, with Jev ahead on choices with many options.
-          Those are the Laya team&apos;s numbers, and their Jev figures come from third parties rather than their own API access.
-          Treat them as claims, not measurements.
-        </p>
-        <p>
-          TypeSafe&apos;s claims are similar in kind: two orders of magnitude faster and cheaper than language models on the
-          tasks they chose, with the evaluation designed in-house.
-        </p>
-        <p>
-          That is why this site measures its own. Same games, same seeds, same text to both models, everything recorded.
-        </p>
-      </Section>
-
-      <Section title="What we found">
-        <p>
-          Jev wins every metric about making good decisions: crash rate, distance, food eaten, matching blackjack&apos;s optimal
-          play, whether the answer follows the situation, and whether its confidence can be trusted. Laya wins every metric
-          about running it: speed, no failures, no rate limits, no cost, and full control.
-        </p>
-        <p>
-          The short version: <b>Jev can decide, but you rent it. Laya you own, but on these games it is not deciding.</b>{" "}
-          The per-metric table is on the{" "}
-          <Link href="/scorecard/" prefetch={false} className="font-semibold underline decoration-accent decoration-2 underline-offset-4">Scorecard</Link>, with the raw numbers on{" "}
-          <Link href="/results/" prefetch={false} className="font-semibold underline decoration-accent decoration-2 underline-offset-4">Results</Link>.
-        </p>
-      </Section>
-
-      <Section title="Which to reach for">
-        <p>
-          <b>Jev</b> when the decision matters more than the bill: safety checks, routing, anything where a wrong choice is
-          expensive, and when a choice has dozens of options.
-        </p>
-        <p>
-          <b>Laya</b> when the data cannot leave your machine, when you need thousands of decisions a second, when there is
-          no budget, or when you intend to fine-tune the model on your own decisions, which is the one thing a closed model
-          cannot offer.
-        </p>
-        <p className="text-ink-soft">
-          Sources: <Source href="https://typesafe.ai/blog/introducing-system-one-models-and-jev">TypeSafe&apos;s launch post</Source>,{" "}
-          <Source href="https://github.com/NandhaKishorM/laya">Laya&apos;s README and benchmarks</Source>.
-        </p>
+      <Section title="Sources">
+        <Sources items={sources} />
       </Section>
     </LearnPage>
+  );
+}
+
+function Column({ model, children }: { model: Model; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0 bg-surface">
+      <h3 className="border-b border-line px-4 py-2.5 text-body font-extrabold">{model.name}</h3>
+      <div className="px-4 py-4">{children}</div>
+    </div>
   );
 }

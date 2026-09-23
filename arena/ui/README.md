@@ -4,12 +4,12 @@ A Next.js app with three pages, backed by the Python arena server (see [../READM
 
 - **Arena** (`/`): pick a game and two agents, then watch both play the same seed at once, live or from a recording.
 - **Results** (`/results/`): the latest benchmark per game, with 95% intervals.
-- **Learn** (`/learn/`): how Jev and Laya work, with diagrams and sources.
+- **Learn** (`/learn/`): four pages. `/learn/` walks through one real recorded decision end to end; `/learn/jev/` and `/learn/laya/` answer the same six questions about each model; `/learn/comparison/` sets those answers side by side.
 
 ```
 npm install
 npm run dev      # http://localhost:3000
-npm test         # Vitest: playback, decisions, game config, insights, highway drawing
+npm test         # Vitest: playback, decisions, game config, insights, highway drawing, Learn content
 npm run build    # static site in out/, reading from the arena server
 npm run preview:static   # the published site: static data, no server, on http://localhost:4000
 ```
@@ -52,7 +52,11 @@ Everything on the page comes from the recorded events; nothing about the request
 - `lib/decisions.ts`: the pure logic behind the play page — the Earlier-decisions rows from two event streams, every option with the probability the model gave it (`optionShares`, which keeps options the model never scored), the `questions` half of the request from a `start` event, the shared comparison scale, and each model's standing (`driving`, `crashed at 16`) for the comparison ribbon.
 - `lib/draw/`: canvas drawing for Highway (`highway.ts`, a horizontal road with smooth car motion) and Snake (`snake.ts`). Blackjack is plain markup in `components/blackjack-board.tsx`.
 - `lib/insights.ts`: per-game warnings about a decision.
+- `lib/learn.ts`: the Learn section's content. Both models answer the same six questions (`QUESTIONS`), and each answer is a list of claims carrying a `Provenance` tag — a closed union of `source`, `model-card`, `config`, `measured` and `inference`, so a typo cannot invent a category. `pairAnswers` zips the two models question by question for the comparison page and names the side that has published nothing. The Jev page, the Laya page and the comparison page all render this one module, so they cannot drift apart; write an answer once, and it appears in all three.
 - `components/arena.tsx` (the two columns), `model-band.tsx` (one model's move and board), `exchange.tsx` (one model's option split and raw wire), `decision-list.tsx`, `code.tsx`, `results.tsx`, `mermaid.tsx`, `site-nav.tsx`: the pages' building blocks. Mermaid diagrams are black and white on white.
+- `components/learn-page.tsx` (the Learn shell and every piece a claim renders as, including the provenance chip), `model-page.tsx` (both model pages), `wire.tsx` (one recorded call, quoted a fragment at a time), `real-decision.tsx` and `raw-decision.tsx`. Two diagrams earn their place: the request-and-answer flow on `/learn/`, and the option-marker mechanism on `/learn/laya/`.
+
+Nothing shown as a request or an answer is typed into a Learn page. `wire.tsx` fetches the recording from `arena/runs/` and slices it, so the walkthrough on `/learn/` is literally highway seed 4, decision 1.
 - `lib/api.ts`: the arena server URL. Defaults to `http://localhost:8000`; override it with `NEXT_PUBLIC_ARENA_API` at build time.
 
 Styling uses Tailwind v4 tokens in `app/globals.css`, with sign green as the only accent and light and dark themes. Type is Overpass, via `next/font`. Icons come from Phosphor, and bar animations use Motion, which respects reduced-motion settings. `lodash-es` is pinned to 4.18.1 through `overrides`, because Mermaid's parser still pulls a vulnerable 4.17.
