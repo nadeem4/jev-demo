@@ -16,7 +16,7 @@ export function lerpFrame(prev: Frame, next: Frame, t: number): Frame {
   return { ego, others };
 }
 
-/** Top-down vertical road: the model's car drives up the screen. */
+/** Top-down horizontal road: the model's car drives towards the right edge. */
 export function drawHighway(canvas: HTMLCanvasElement, view: FrameView | null, ended: boolean) {
   const { g, w, h } = prepare(canvas);
   g.fillStyle = cssVar("--asphalt");
@@ -27,25 +27,25 @@ export function drawHighway(canvas: HTMLCanvasElement, view: FrameView | null, e
   const v = viewport({ width: w, height: h, egoX });
   g.strokeStyle = "rgba(245, 247, 245, 0.85)";
   g.lineWidth = 2;
-  for (const x of [v.roadLeft, v.roadRight]) {
-    g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke();
+  for (const y of [v.roadTop, v.roadBottom]) {
+    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke();
   }
   g.setLineDash([3 * v.scale, 6 * v.scale]);
-  g.lineDashOffset = -(egoX % 9) * v.scale;  // dashes scroll with the world so speed is visible
+  g.lineDashOffset = (egoX % 9) * v.scale;  // dashes scroll with the world so speed is visible
   for (let i = 1; i < LANES; i++) {
-    const x = v.sx((i - 0.5) * LANE_W);
-    g.beginPath(); g.moveTo(x, h); g.lineTo(x, 0); g.stroke();
+    const y = v.y((i - 0.5) * LANE_W);
+    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke();
   }
   g.setLineDash([]);
   if (!frame) return;
 
   const car = (x: number, y: number, heading: number, fill: string) => {
     g.save();
-    g.translate(v.sx(y), v.sy(x));
+    g.translate(v.x(x), v.y(y));
     g.rotate(heading);
     g.fillStyle = fill;
     g.beginPath();
-    g.roundRect((-CAR_W / 2) * v.scale, (-CAR_L / 2) * v.scale, CAR_W * v.scale, CAR_L * v.scale, 0.5 * v.scale);
+    g.roundRect((-CAR_L / 2) * v.scale, (-CAR_W / 2) * v.scale, CAR_L * v.scale, CAR_W * v.scale, 0.5 * v.scale);
     g.fill();
     g.restore();
   };

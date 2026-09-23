@@ -2,11 +2,14 @@ import {
   ArrowBendUpLeft, ArrowBendUpRight, ArrowUp, CaretDoubleDown, CaretDoubleUp, HandPalm, Plus, type Icon,
 } from "@phosphor-icons/react";
 import type { AnyFrame, EndEvent, GameId, StepEvent } from "./types";
+import type { PanelView } from "./views";
 
 export interface AgentInfo { id: string; name: string; about: string }
 export interface OptionInfo { id: string; label: string; icon: Icon }
 export interface Stat { label: string; value: string; danger?: boolean }
 export interface ResultMetric { key: string; label: string; kind: "rate" | "mean"; better: "higher" | "lower"; percent?: boolean }
+/** The one number that compares two models on the same scale while they play. */
+export interface Measure { label: string; value: (view: PanelView) => number | null; format: (n: number) => string }
 
 export interface GameInfo {
   id: GameId;
@@ -17,6 +20,7 @@ export interface GameInfo {
   stateOrder: string[];
   stateLabels: Record<string, string>;
   stats: (step: StepEvent | null, end: EndEvent | null) => Stat[];
+  measure: Measure;
   results: ResultMetric[];
   /** Agents that define the deciding metric rather than compete on it (blackjack's basic strategy). */
   defines?: string[];
@@ -28,6 +32,7 @@ const MODELS: AgentInfo[] = [
 ];
 
 const frameOf = <T,>(step: StepEvent | null) => (step?.frame ?? null) as unknown as T | null;
+const round = (n: number) => String(Math.round(n));
 
 export const GAMES: Record<GameId, GameInfo> = {
   highway: {
@@ -52,6 +57,15 @@ export const GAMES: Record<GameId, GameInfo> = {
         { label: "Speed", value: f ? `${Math.round(f.ego.speed)} m/s` : "-" },
         { label: "Time", value: step ? `${step.t} s` : "-", danger: Boolean(end?.crashed) },
       ];
+    },
+    measure: {
+      label: "Metres travelled",
+      value: (view) => {
+        const now = frameOf<{ ego: { x: number } }>(view.step);
+        const from = view.startFrame as { ego: { x: number } } | null;
+        return now && from ? now.ego.x - from.ego.x : null;
+      },
+      format: (n) => `${Math.round(n)} m`,
     },
     results: [
       { key: "crashed", label: "Crash rate", kind: "rate", better: "lower" },
@@ -80,6 +94,14 @@ export const GAMES: Record<GameId, GameInfo> = {
         { label: "Moves", value: step ? String(step.t) : "-", danger: Boolean(end?.died) },
       ];
     },
+    measure: {
+      label: "Food eaten",
+      value: (view) => {
+        const f = frameOf<{ snake: unknown[] }>(view.step);
+        return f ? f.snake.length - 3 : null;
+      },
+      format: round,
+    },
     results: [
       { key: "food_eaten", label: "Food eaten", kind: "mean", better: "higher" },
       { key: "died", label: "Death rate", kind: "rate", better: "lower" },
@@ -106,6 +128,11 @@ export const GAMES: Record<GameId, GameInfo> = {
         { label: "Won-lost-drawn", value: f ? `${f.wins}-${f.losses}-${f.draws}` : "-" },
         { label: "Net", value: f ? (f.net > 0 ? `+${f.net}` : String(f.net)) : "-", danger: Boolean(f && f.net < 0) },
       ];
+    },
+    measure: {
+      label: "Hands won",
+      value: (view) => frameOf<{ wins: number }>(view.step)?.wins ?? null,
+      format: round,
     },
     defines: ["basic-strategy"],
     results: [

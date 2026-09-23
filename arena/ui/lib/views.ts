@@ -5,6 +5,8 @@ export interface PanelView {
   start: StartEvent | null;
   startFrame: AnyFrame | null;
   step: StepEvent | null;
+  /** Every decision played so far, oldest first. */
+  history: StepEvent[];
   end: EndEvent | null;
   failed: string | null;
   status: string;
@@ -13,7 +15,7 @@ export interface PanelView {
 }
 
 export const EMPTY_VIEW: PanelView = {
-  start: null, startFrame: null, step: null, end: null, failed: null, status: "", waiting: false, started: false,
+  start: null, startFrame: null, step: null, history: [], end: null, failed: null, status: "", waiting: false, started: false,
 };
 
 /** Views are tagged with the game they came from. Each game has its own frame shape,

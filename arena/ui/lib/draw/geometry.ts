@@ -4,18 +4,19 @@ export const LANE_W = 4;
 export const CAR_L = 5;
 export const CAR_W = 2;
 const SHOULDER = 1.5;
-const EGO_AT = 0.75; // ego car sits 75% down the view, so most of the view is road ahead
+const EGO_AT = 0.25; // ego car sits 25% across the view, so most of the view is road ahead
 
+/** The road runs left to right: metres along it map to screen x, metres across it to screen y. */
 export function viewport({ width, height, egoX }: { width: number; height: number; egoX: number }) {
-  const scale = width / (LANES * LANE_W + 2 * SHOULDER);
-  const sx = (y: number) => (y + LANE_W / 2 + SHOULDER) * scale;
-  const sy = (x: number) => height * EGO_AT - (x - egoX) * scale;
+  const scale = height / (LANES * LANE_W + 2 * SHOULDER);
+  const y = (across: number) => (across + LANE_W / 2 + SHOULDER) * scale;
+  const x = (along: number) => width * EGO_AT + (along - egoX) * scale;
   return {
     scale,
-    sx,
-    sy,
-    laneCenter: (lane: number) => sx(lane * LANE_W),
-    roadLeft: sx(-LANE_W / 2),
-    roadRight: sx((LANES - 0.5) * LANE_W),
+    x,
+    y,
+    laneCenter: (lane: number) => y(lane * LANE_W),
+    roadTop: y(-LANE_W / 2),
+    roadBottom: y((LANES - 0.5) * LANE_W),
   };
 }

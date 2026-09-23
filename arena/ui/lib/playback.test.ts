@@ -60,6 +60,28 @@ describe("Playback", () => {
     expect(p.current).toBeNull();
   });
 
+  it("keeps every decision it has played, so earlier ones can be read back", () => {
+    const p = new Playback();
+    [start, step(1), step(2)].forEach((e) => p.push(e));
+    expect(p.history).toEqual([]);
+    p.tick(0, 1000, true);
+    p.tick(1000, 1000, true);
+    expect(p.history.map((s) => s.t)).toEqual([1, 2]);
+  });
+
+  it("can show any decision it has already played", () => {
+    const p = new Playback();
+    [start, step(1), step(2)].forEach((e) => p.push(e));
+    p.tick(0, 1000, true);
+    p.tick(1000, 1000, true);
+    const first = p.frameAt(1)!;
+    expect((first.prev as Frame).ego.x).toBe(0);
+    expect((first.next as Frame).ego.x).toBe(25);
+    expect(first.t).toBe(1);
+    expect((p.frameAt(2)!.prev as Frame).ego.x).toBe(25);
+    expect(p.frameAt(9)).toBeNull();
+  });
+
   it("records the episode summary at the end", () => {
     const p = new Playback();
     [start, step(1), { type: "end", steps: 1, crashed: true, distance_m: 25, total_reward: 1, avg_speed: 25 } as ArenaEvent]

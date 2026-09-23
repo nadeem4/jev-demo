@@ -1,17 +1,21 @@
 "use client";
 
-import { Play } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, Pause, Play } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { STATIC_SITE, commonSeeds, urls, type RunsIndex } from "@/lib/api";
+import { compareBars, decisionRows, envelopeOf } from "@/lib/decisions";
 import { drawHighway } from "@/lib/draw/highway";
 import { drawSnake } from "@/lib/draw/snake";
 import { GAMES, GAME_IDS } from "@/lib/games";
+import { tone, type Tone } from "@/lib/insights";
 import { Playback, type FrameView } from "@/lib/playback";
 import type { ArenaEvent, GameId } from "@/lib/types";
 import { viewsForGame, type PanelView, type TaggedViews } from "@/lib/views";
 import { BlackjackBoard } from "./blackjack-board";
-import { Inspector } from "./inspector";
-import { ModelPanel } from "./model-panel";
+import { DecisionList } from "./decision-list";
+import { EnvelopeStrip } from "./envelope-strip";
+import { Exchange } from "./exchange";
+import { MovesCard } from "./moves-card";
 import { RunItYourself } from "./run-it-yourself";
 
 type Source = "live" | "recording";
@@ -23,13 +27,19 @@ const DRAW: Partial<Record<GameId, (c: HTMLCanvasElement, v: FrameView | null, e
   snake: (c, v) => drawSnake(c, v),
 };
 const BOARD_CLASS: Partial<Record<GameId, string>> = {
-  highway: "h-[min(560px,64dvh)] w-[132px] md:w-[150px]",
-  snake: "aspect-square w-[min(40vw,240px)]",
+  highway: "h-[120px] w-full",
+  snake: "aspect-square w-[min(62vw,240px)]",
 };
 const SCENARIO_WORD: Record<GameId, string> = { highway: "traffic", snake: "food layout", blackjack: "deck" };
+const TONE: Record<Tone, string> = {
+  danger: "text-danger font-semibold",
+  clear: "text-clear",
+  muted: "text-ink-soft",
+  normal: "text-ink",
+};
 
 function viewOf(p: Playback): PanelView {
-  return { start: p.start, startFrame: p.start?.frame ?? null, step: p.current, end: p.end,
+  return { start: p.start, startFrame: p.start?.frame ?? null, step: p.current, history: p.history, end: p.end,
            failed: p.failed, status: p.status, waiting: p.waiting, started: p.status !== "" };
 }
 
@@ -39,34 +49,45 @@ export function Arena() {
   const [seed, setSeed] = useState(4);
   const [source, setSource] = useState<Source>(STATIC_SITE ? "recording" : "live");
   const [speed, setSpeed] = useState(1);
-  const [raw, setRaw] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [pinned, setPinned] = useState<number | null>(null);
   const [runsIndex, setRunsIndex] = useState<RunsIndex>({});
   const [playing, setPlaying] = useState<{ game: GameId; agents: [string, string]; seed: number } | null>(null);
   const [tagged, setTagged] = useState<TaggedViews>(() => ({ game: "highway", views: SIDES.map(() => viewOf(new Playback())) }));
 
   const info = GAMES[game];
-  const views = viewsForGame(tagged, game);
+  const live = viewsForGame(tagged, game);
   const playbacks = useRef<Playback[]>(SIDES.map(() => new Playback()));
   const canvases = useRef<(HTMLCanvasElement | null)[]>([null, null]);
   const streams = useRef<EventSource[]>([]);
   const speedRef = useRef(speed);
   const gameRef = useRef(game);
+  const pausedRef = useRef(paused);
+  const pinnedRef = useRef(pinned);
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { gameRef.current = game; }, [game]);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
+  useEffect(() => { pinnedRef.current = pinned; }, [pinned]);
 
   // One animation loop for both sides. Playback waits until both are ready, so a
-  // slow-loading model never starts late.
+  // slow-loading model never starts late. A paused clock freezes it where it is;
+  // a pinned decision draws that decision's frames instead of the live ones.
   useEffect(() => {
     let raf = 0;
     let lastKey = "";
+    let clock = 0;
+    let last = 0;
     const loop = (now: number) => {
+      if (last) clock += pausedRef.current ? 0 : now - last;
+      last = now;
       const pbs = playbacks.current;
       const go = pbs.every((p) => p.ready || p.failed);
       const draw = DRAW[gameRef.current];
+      const pin = pinnedRef.current;
       pbs.forEach((p, i) => {
-        const view = p.tick(now, 1000 / speedRef.current, go);
+        const view = p.tick(clock, 1000 / speedRef.current, go);
         const canvas = canvases.current[i];
-        if (canvas && draw) draw(canvas, view, Boolean(p.end));
+        if (canvas && draw) draw(canvas, (pin === null ? null : p.frameAt(pin)) ?? view, Boolean(p.end));
       });
       const key = pbs.map((p) => `${p.current?.t}|${p.end?.steps}|${p.failed}|${p.status}|${p.waiting}|${p.ready}`).join("/");
       if (key !== lastKey) {
@@ -85,21 +106,53 @@ export function Arena() {
   const recorded = commonSeeds(runsIndex, game, agents[0], agents[1]);
   const seedToPlay = STATIC_SITE && !recorded.includes(seed) ? recorded[0] : seed;
   const agentInfo = (id: string) => info.agents.find((a) => a.id === id) ?? info.agents[0];
-  const names: [string, string] = [agentInfo(agents[0]).name, agentInfo(agents[1]).name];
+  const infos = agents.map(agentInfo);
+  const names = infos.map((a) => a.name);
   const stale = playing !== null &&
     (playing.game !== game || playing.seed !== seedToPlay || playing.agents[0] !== agents[0] || playing.agents[1] !== agents[1]);
+
+  // What the page shows: the live decision, or the one pinned in Earlier decisions.
+  // A model that stopped earlier has no decision there, and says so rather than
+  // repeating its last one.
+  const views = pinned === null ? live : live.map((v) => {
+    const step = v.history.find((s) => s.t === pinned) ?? null;
+    const last = v.history[v.history.length - 1];
+    return step ? { ...v, step } : { ...v, step, started: true, status: last ? `It made no decision ${pinned}; its episode ended at ${last.t}.` : "" };
+  });
+  const rows = decisionRows(game, live.map((v) => v.history));
+  const latest = Math.max(0, ...views.map((v) => v.step?.t ?? 0));
+  const decision = pinned ?? (latest || null);
+  const envelope = envelopeOf(views.find((v) => v.start)?.start ?? null);
+  const bars = compareBars(views.map((v) => info.measure.value(v)));
 
   function reset() {
     streams.current.forEach((s) => s.close());
     streams.current = [];
     playbacks.current = SIDES.map(() => new Playback());
     setPlaying(null);
+    setPinned(null);
+    setPaused(false);
   }
 
   function pickGame(id: GameId) {
     reset();
     setGame(id);
     setAgents(["jev", "laya"]);
+  }
+
+  /** Back and Forward pin playback one decision either way. */
+  function stepBy(delta: number) {
+    if (!rows.length) return;
+    const ts = rows.map((r) => r.t).reverse();
+    const at = ts.indexOf(pinned ?? ts[ts.length - 1]);
+    const next = ts[Math.min(ts.length - 1, Math.max(0, (at < 0 ? ts.length - 1 : at) + delta))];
+    setPaused(true);
+    setPinned(next);
+  }
+
+  function follow() {
+    setPinned(null);
+    setPaused(false);
   }
 
   function play(e: React.FormEvent) {
@@ -168,9 +221,9 @@ export function Arena() {
 
       <form onSubmit={play} className="sticky top-0 z-10 -mx-4 border-y border-line bg-page/95 px-4 py-3 backdrop-blur md:-mx-8 md:px-8">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-          <Picker label="Left" value={agents[0]} onChange={(id) => setAgent(0, id)} agents={info.agents} />
+          <Picker label="First" value={agents[0]} onChange={(id) => setAgent(0, id)} agents={info.agents} />
           <span aria-hidden className="text-micro font-extrabold text-ink-soft">vs</span>
-          <Picker label="Right" value={agents[1]} onChange={(id) => setAgent(1, id)} agents={info.agents} />
+          <Picker label="Second" value={agents[1]} onChange={(id) => setAgent(1, id)} agents={info.agents} />
 
           <Picker
             label="Scenario"
@@ -194,10 +247,20 @@ export function Arena() {
             />
           )}
 
-          <label className="flex cursor-pointer items-center gap-2 text-micro font-semibold text-ink-soft hover:text-ink">
-            <input type="checkbox" checked={raw} onChange={(e) => setRaw(e.target.checked)} className="size-4 accent-[var(--accent)]" />
-            Raw view
-          </label>
+          <div className="grid gap-1">
+            <span className="text-micro text-ink-soft">Playback</span>
+            <div className="flex items-center gap-1">
+              <Control label="Back one decision" onClick={() => stepBy(-1)} disabled={!rows.length}><CaretLeft size={16} weight="bold" aria-hidden /></Control>
+              <Control
+                label={paused ? "Resume and follow the game" : "Pause"}
+                onClick={() => (paused ? follow() : setPaused(true))}
+                pressed={paused}
+              >
+                {paused ? <Play size={16} weight="fill" aria-hidden /> : <Pause size={16} weight="fill" aria-hidden />}
+              </Control>
+              <Control label="Forward one decision" onClick={() => stepBy(1)} disabled={!rows.length}><CaretRight size={16} weight="bold" aria-hidden /></Control>
+            </div>
+          </div>
 
           <div className="ml-auto flex items-center gap-3">
             {stale && <span className="text-micro font-semibold text-ink">Press play to load it</span>}
@@ -213,51 +276,125 @@ export function Arena() {
         </div>
       </form>
 
-      <p className="py-4 text-micro text-ink-soft">
-        {info.blurb} Scenario #{seedToPlay ?? 0} gives both models the same {SCENARIO_WORD[game]}.
-        {STATIC_SITE && <> These are recordings: <a href="#run-it" className="font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">run the arena yourself</a> to watch live.</>}
+      <p className="flex flex-wrap items-baseline gap-x-3 py-4 text-micro text-ink-soft">
+        <span>
+          {info.blurb} Scenario #{seedToPlay ?? 0} gives both models the same {SCENARIO_WORD[game]}.
+          {STATIC_SITE && <> These are recordings: <a href="#run-it" className="font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">run the arena yourself</a> to watch live.</>}
+        </span>
+        {pinned !== null && (
+          <span className="flex items-baseline gap-2 font-semibold text-ink">
+            Pinned to decision <span className="numeric">{pinned}</span>
+            <button type="button" onClick={follow} className="font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">
+              Follow the game again
+            </button>
+          </span>
+        )}
       </p>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-10">
-        <div className="order-2 lg:order-1">
-          <ModelPanel game={game} agent={agentInfo(agents[0])} view={views[0]} align="left" />
-        </div>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(420px,460px)_minmax(0,1fr)] lg:items-start lg:gap-10">
+        <div className="grid content-start gap-6">
+          <MovesCard game={game} agents={infos} views={views} decision={decision} />
 
-        <div className="order-1 flex justify-center gap-5 lg:order-2">
-          {SIDES.map((i) => (
-            <figure key={i} className="grid content-start justify-items-center gap-2">
-              <figcaption className="text-micro font-semibold text-ink-soft">{names[i]}</figcaption>
-              {DRAW[game] ? (
-                <canvas
-                  key={game}
-                  ref={(el) => { canvases.current[i] = el; }}
-                  className={BOARD_CLASS[game]}
-                  role="img"
-                  aria-label={`${info.name} played by ${names[i]}. The yellow piece is this model's.`}
-                />
-              ) : (
-                <BlackjackBoard step={views[i].step} start={views[i].startFrame} />
-              )}
-              <dl className="mt-1 grid w-full grid-cols-2 gap-2 border-t border-line pt-2 text-center">
-                {info.stats(views[i].step, views[i].end).map((s) => (
-                  <div key={s.label}>
-                    <dt className="text-micro text-ink-soft">{s.label}</dt>
-                    <dd className={`numeric text-body font-extrabold ${s.danger ? "text-danger" : ""}`}>{s.value}</dd>
+          <div className="grid gap-5">
+            {SIDES.map((i) => (
+              <figure key={i} className="grid content-start justify-items-center gap-2">
+                <figcaption className="w-full text-micro font-semibold text-ink-soft">{names[i]}</figcaption>
+                {DRAW[game] ? (
+                  <canvas
+                    key={game}
+                    ref={(el) => { canvases.current[i] = el; }}
+                    className={BOARD_CLASS[game]}
+                    role="img"
+                    aria-label={`${info.name} played by ${names[i]}. The yellow piece is this model's.`}
+                  />
+                ) : (
+                  <BlackjackBoard step={views[i].step} start={views[i].startFrame} />
+                )}
+                <dl className="mt-1 grid w-full grid-cols-2 gap-2 border-t border-line pt-2 text-center">
+                  {info.stats(views[i].step, views[i].end).map((s) => (
+                    <div key={s.label}>
+                      <dt className="text-micro text-ink-soft">{s.label}</dt>
+                      <dd className={`numeric text-body font-extrabold ${s.danger ? "text-danger" : ""}`}>{s.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                <StateRead game={game} view={views[i]} />
+              </figure>
+            ))}
+          </div>
+
+          <section aria-labelledby="compare-title" className="border-t-2 border-line-strong pt-4">
+            <h2 id="compare-title" className="text-micro text-ink-soft">{info.measure.label}, both on one scale</h2>
+            <dl className="mt-3 grid gap-3">
+              {bars.map((bar, i) => (
+                <div key={names[i] + i} className="grid gap-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <dt className="truncate text-micro font-semibold text-ink">{names[i]}</dt>
+                    <dd className="numeric text-body font-extrabold">{bar.value === null ? "–" : info.measure.format(bar.value)}</dd>
                   </div>
-                ))}
-              </dl>
-            </figure>
-          ))}
+                  <div className="h-[8px] bg-sunk" aria-hidden>
+                    <div className="h-full bg-accent" style={{ width: `${Math.round(bar.fraction * 100)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </dl>
+          </section>
         </div>
 
-        <div className="order-3">
-          <ModelPanel game={game} agent={agentInfo(agents[1])} view={views[1]} align="right" />
+        <div className="grid min-w-0 content-start gap-6">
+          <EnvelopeStrip envelope={envelope} />
+          {SIDES.map((i) => (
+            <Exchange
+              key={names[i] + i}
+              name={names[i]}
+              step={views[i].step}
+              waitingFor={views[i].failed ?? (views[i].started ? views[i].status || "Starting…" : "Press Play to see the wire.")}
+            />
+          ))}
+          <DecisionList game={game} names={names} rows={rows} selected={pinned} onSelect={(t) => { setPaused(true); setPinned(t); }} />
         </div>
       </div>
 
-      {raw && <Inspector names={names} views={views} />}
       {STATIC_SITE && <RunItYourself />}
     </main>
+  );
+}
+
+/** The plain-language situation the model was given, under its board. */
+function StateRead({ game, view }: { game: GameId; view: PanelView }) {
+  const info = GAMES[game];
+  const step = view.step;
+  if (!step) return null;
+  return (
+    <div className="w-full border-t border-line pt-2">
+      <p className="text-micro text-ink-soft">What it read before deciding</p>
+      <dl className="mt-1.5 grid gap-1">
+        {info.stateOrder.filter((k) => step.state[k]).map((k) => (
+          <div key={k} className="flex flex-wrap items-baseline gap-x-2">
+            <dt className="text-micro text-ink-soft">{info.stateLabels[k] ?? k}</dt>
+            <dd className={`text-micro leading-snug ${TONE[tone(step.state[k])]}`}>{step.state[k]}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+function Control({ label, onClick, disabled, pressed, children }: {
+  label: string; onClick: () => void; disabled?: boolean; pressed?: boolean; children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      {...(pressed === undefined ? {} : { "aria-pressed": pressed })}
+      className="grid size-9 place-items-center bg-surface text-ink-soft transition-colors hover:text-ink disabled:opacity-40"
+    >
+      {children}
+    </button>
   );
 }
 

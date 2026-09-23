@@ -19,7 +19,7 @@ The Vercel account needs a credit card on file before AI Gateway will serve requ
 
 | Folder | What it does |
 |---|---|
-| [arena](arena/) | Jev vs open-source Laya (plus baselines) playing highway-env, Snake and Blackjack with zero training. Watch them side by side, live or from recordings, and benchmark them |
+| [arena](arena/) | Jev vs open-source Laya (plus baselines) playing highway-env, Snake and Blackjack with zero training. Watch both play the same scenario, with every request and answer on the page, live or from recordings, and benchmark them |
 | [agent-watchdog](agent-watchdog/) | Supervises Claude Code: scores every tool call for reversibility, scope drift, prompt injection, and looping before it runs |
 
 ## Quick start
