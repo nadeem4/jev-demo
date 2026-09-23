@@ -207,7 +207,7 @@ export default function Page() {
               {[
                 ["choice", "Pick one of N", "A map of option to description", "The chosen key, plus a probability for every option"],
                 ["score", "How much, on a scale", "An ordered list of rungs, low to high", "A number on that scale, for example 1.84 out of 2"],
-                ["noul", "Is this true, yes or no", "Nothing. You send no criteria", "A single probability, for example 0.892"],
+                ["noul / boolean", "Is this true, yes or no", "Nothing. You send no criteria", "A single probability, for example 0.892"],
               ].map(([type, use, send, back]) => (
                 <tr key={type} className="border-b border-line last:border-0 align-top">
                   <th scope="row" className="px-3 py-2 text-left font-mono font-semibold">{type}</th>
@@ -219,6 +219,14 @@ export default function Page() {
             </tbody>
           </table>
         </div>
+        <p className="max-w-[70ch] text-ink-soft">
+          The names are not standard. The yes-or-no question is <code className="font-mono text-ink">noul</code> to Laya, which
+          answers in a field of the same name, and <code className="font-mono text-ink">boolean</code> to Jev, which answers in
+          a field called <code className="font-mono text-ink">probability</code>. Send Laya&apos;s name to Jev and you get back{" "}
+          <code className="font-mono text-ink">400 Invalid discriminator value. Expected &apos;choice&apos; | &apos;score&apos; | &apos;boolean&apos;</code>.
+          The question is the same; only the dialect differs.
+          <span className="ml-2 rounded-sm border border-line bg-sunk px-1.5 py-px align-middle font-mono text-micro font-normal text-ink-soft">measured here</span>
+        </p>
         <figure className="grid min-w-0 gap-2">
           <figcaption className="text-micro font-semibold text-ink-soft">
             A real example of each, from Laya&apos;s own documentation
