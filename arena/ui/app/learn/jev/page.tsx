@@ -19,12 +19,15 @@ export default function Page() {
       intro="TypeSafe AI's closed decision model, released on 15 September 2026. Fast, typed, and a black box."
       checked="22 September 2026"
     >
-      <Section title="What TypeSafe has published">
+      <Section title="What is known, and who said it">
         <p>
-          Jev is transformer-based but not a language model. TypeSafe describes a new architecture, a parallel sampler that
-          produces every answer in one query rather than token by token, and a training method they call RLCD, Reinforcement
-          Learning for Calibrated Decisions. The architecture itself, the model size and the training data are not published,
-          so the middle of this diagram is a black box on purpose.
+          TypeSafe has not said what Jev is. Their launch post claims &ldquo;a new model architecture, parallel sampler for
+          maximum efficiency, and training method we call Reinforcement Learning for Calibrated Decisions (RLCD)&rdquo; — and
+          that is the whole of it: the words transformer, attention, encoder, decoder and parameters appear nowhere in the
+          post, the docs, or anything else they have published. TechCrunch describes Jev as &ldquo;a new transformer-based
+          model&hellip; that is not a large language model&rdquo;, but that is a reporter&apos;s wording, not TypeSafe&apos;s.
+          Model size, training data and how the parallel sampler works are all unpublished, so the middle of this diagram is
+          a black box on purpose. Laya, by contrast, ships a config file you can read.
         </p>
       </Section>
       <Mermaid chart={JEV} label="Jev: a state and typed questions go into an unpublished model; a parallel sampler returns typed answers with calibrated probabilities." />
