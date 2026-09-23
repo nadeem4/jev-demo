@@ -2,7 +2,8 @@
 // request that never changes, and the shared scale under the bands.
 
 import { concerns } from "./insights";
-import type { GameId, StartEvent, StepEvent } from "./types";
+import type { EndEvent, GameId, StartEvent, StepEvent } from "./types";
+import type { PanelView } from "./views";
 
 export interface DecisionCell { action: string | null; confidence: number | null; warned: boolean }
 export interface DecisionRow { t: number; cells: DecisionCell[] }
@@ -43,6 +44,22 @@ export function questionsOf(start: StartEvent | null): RequestQuestions | null {
       ? `questions — the ${count} option${count === 1 ? "" : "s"}, identical on every call`
       : "questions — identical on every call",
   };
+}
+
+const LIVE_WORD: Record<GameId, string> = { highway: "driving", snake: "moving", blackjack: "playing" };
+
+const ENDED_WORD: Record<GameId, (end: EndEvent) => string> = {
+  highway: (end) => (end.crashed ? `crashed at ${end.steps}` : `drove all ${end.steps}`),
+  snake: (end) => (end.died ? `died at ${end.steps}` : `survived ${end.steps}`),
+  blackjack: () => "finished",
+};
+
+/** One model's headline state in its own episode, for the comparison ribbon. */
+export function standing(game: GameId, view: PanelView): string {
+  if (view.failed) return "did not run";
+  if (view.end) return ENDED_WORD[game](view.end);
+  if (view.step) return LIVE_WORD[game];
+  return view.started ? "starting" : "not started";
 }
 
 /** Puts every model's headline measure on one scale, so the bars can be read against each other. */

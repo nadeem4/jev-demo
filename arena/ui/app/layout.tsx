@@ -11,7 +11,7 @@ const overpassMono = Overpass_Mono({ variable: "--font-overpass-mono", subsets: 
 
 export const metadata: Metadata = {
   title: "Decision Arena",
-  description: "Jev and Laya play the same games side by side, with every input and decision visible, plus benchmarks and how the models work.",
+  description: "Jev and Laya play the same games on the same scenarios, with every input and decision visible, plus benchmarks and how the models work.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

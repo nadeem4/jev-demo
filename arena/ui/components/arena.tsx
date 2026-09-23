@@ -3,7 +3,7 @@
 import { CaretLeft, CaretRight, Pause, Play } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { STATIC_SITE, commonSeeds, urls, type RunsIndex } from "@/lib/api";
-import { compareBars, decisionRows, questionsOf } from "@/lib/decisions";
+import { compareBars, decisionRows, questionsOf, standing } from "@/lib/decisions";
 import { drawHighway } from "@/lib/draw/highway";
 import { drawSnake } from "@/lib/draw/snake";
 import { GAMES, GAME_IDS } from "@/lib/games";
@@ -25,8 +25,8 @@ const DRAW: Partial<Record<GameId, (c: HTMLCanvasElement, v: FrameView | null, e
   snake: (c, v) => drawSnake(c, v),
 };
 const BOARD_CLASS: Partial<Record<GameId, string>> = {
-  highway: "h-[120px] w-full",
-  snake: "aspect-square w-[min(62vw,240px)]",
+  highway: "h-[120px] w-full lg:h-[160px]",
+  snake: "aspect-square w-[min(62vw,300px)]",
 };
 const SCENARIO_WORD: Record<GameId, string> = { highway: "traffic", snake: "food layout", blackjack: "deck" };
 
@@ -38,6 +38,8 @@ function viewOf(p: Playback): PanelView {
 export function Arena() {
   const [game, setGame] = useState<GameId>("highway");
   const [agents, setAgents] = useState<[string, string]>(["jev", "laya"]);
+  /** Which model is on screen. Both play underneath; the tab only picks what is shown. */
+  const [tab, setTab] = useState<0 | 1>(0);
   const [seed, setSeed] = useState(4);
   const [source, setSource] = useState<Source>(STATIC_SITE ? "recording" : "live");
   const [speed, setSpeed] = useState(1);
@@ -188,7 +190,7 @@ export function Arena() {
         <div>
           <h1 className="text-h1 font-extrabold leading-[0.95] tracking-tight">Watch them decide</h1>
           <p className="mt-3 max-w-[54ch] text-lead leading-relaxed text-ink-soft">
-            Two decision models, the same game, the same situations, no training. Every move they make, and the reason behind it, is on the page.
+            Two decision models, the same game, the same situations, no training. Each plays its own game, so you watch one at a time — flip between them at the same decision.
           </p>
         </div>
         <nav aria-label="Games" className="flex flex-wrap gap-1.5 md:justify-end">
@@ -280,58 +282,73 @@ export function Arena() {
         )}
       </p>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(420px,460px)_minmax(0,1fr)] lg:items-start lg:gap-10">
-        <div className="grid content-start gap-6">
+      <div className="grid min-w-0 gap-6">
+        <nav aria-label="Models" className="flex flex-wrap gap-1.5">
           {SIDES.map((i) => (
-            <ModelBand
-              key={infos[i].id + i}
-              game={game}
-              agent={infos[i]}
-              view={views[i]}
-              board={DRAW[game] ? (
-                <canvas
-                  key={game}
-                  ref={(el) => { canvases.current[i] = el; }}
-                  className={BOARD_CLASS[game]}
-                  role="img"
-                  aria-label={`${info.name} played by ${names[i]}. The yellow piece is this model's.`}
-                />
-              ) : (
-                <BlackjackBoard step={views[i].step} start={views[i].startFrame} />
-              )}
-            />
-          ))}
-
-          <section aria-labelledby="compare-title" className="border-t-2 border-line-strong pt-4">
-            <h2 id="compare-title" className="text-micro text-ink-soft">{info.measure.label}, both on one scale</h2>
-            <dl className="mt-3 grid gap-3">
-              {bars.map((bar, i) => (
-                <div key={names[i] + i} className="grid gap-1">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <dt className="truncate text-micro font-semibold text-ink">{names[i]}</dt>
-                    <dd className="numeric text-body font-extrabold">{bar.value === null ? "–" : info.measure.format(bar.value)}</dd>
-                  </div>
-                  <div className="h-[8px] bg-sunk" aria-hidden>
-                    <div className="h-full bg-accent" style={{ width: `${Math.round(bar.fraction * 100)}%` }} />
-                  </div>
-                </div>
-              ))}
-            </dl>
-          </section>
-        </div>
-
-        <div className="grid min-w-0 content-start gap-6">
-          {SIDES.map((i) => (
-            <Exchange
+            <button
               key={names[i] + i}
-              name={names[i]}
-              step={views[i].step}
-              questions={questionsOf(views[i].start)}
-              waitingFor={views[i].failed ?? (views[i].started ? views[i].status || "Starting…" : "Press Play to see the wire.")}
-            />
+              type="button"
+              onClick={() => setTab(i)}
+              aria-pressed={tab === i}
+              className={`h-10 px-5 text-body font-extrabold transition-colors ${
+                tab === i ? "bg-ink text-page" : "bg-surface text-ink-soft hover:text-ink"
+              }`}
+            >
+              {names[i]}
+            </button>
           ))}
-          <DecisionList game={game} names={names} rows={rows} selected={pinned} onSelect={(t) => { setPaused(true); setPinned(t); }} />
-        </div>
+          <p className="flex items-center text-micro text-ink-soft md:ml-2">
+            Each model runs its own {SCENARIO_WORD[game]} from the same scenario; they never meet. Switching keeps the decision you are on.
+          </p>
+        </nav>
+
+        <section aria-labelledby="compare-title" className="border border-line bg-surface px-4 py-3">
+          <h2 id="compare-title" className="text-micro text-ink-soft">{info.measure.label}, both models on one scale</h2>
+          <dl className="mt-2 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+            {bars.map((bar, i) => (
+              <div key={names[i] + i} className="grid min-w-0 gap-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="min-w-0 truncate text-micro font-semibold text-ink">
+                    {names[i]} <span className="font-normal text-ink-soft">· {standing(game, views[i])}</span>
+                  </dt>
+                  <dd className="numeric shrink-0 text-body font-extrabold">{bar.value === null ? "–" : info.measure.format(bar.value)}</dd>
+                </div>
+                <div className="h-[6px] bg-sunk" aria-hidden>
+                  <div className="h-full bg-accent" style={{ width: `${Math.round(bar.fraction * 100)}%` }} />
+                </div>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        <ModelBand
+          game={game}
+          agent={infos[tab]}
+          view={views[tab]}
+          board={DRAW[game] ? (
+            <canvas
+              key={game + tab}
+              ref={(el) => {
+                canvases.current[tab] = el;
+                return () => { canvases.current[tab] = null; };
+              }}
+              className={BOARD_CLASS[game]}
+              role="img"
+              aria-label={`${info.name} played by ${names[tab]}. The yellow piece is this model's.`}
+            />
+          ) : (
+            <BlackjackBoard step={views[tab].step} start={views[tab].startFrame} />
+          )}
+        />
+
+        <Exchange
+          name={names[tab]}
+          step={views[tab].step}
+          questions={questionsOf(views[tab].start)}
+          waitingFor={views[tab].failed ?? (views[tab].started ? views[tab].status || "Starting…" : "Press Play to see the wire.")}
+        />
+
+        <DecisionList game={game} names={names} rows={rows} selected={pinned} onSelect={(t) => { setPaused(true); setPinned(t); }} />
       </div>
 
       {STATIC_SITE && <RunItYourself />}

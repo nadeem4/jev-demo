@@ -2,7 +2,7 @@
 
 A Next.js app with three pages, backed by the Python arena server (see [../README.md](../README.md)):
 
-- **Arena** (`/`): pick a game and two agents, then watch them play the same seed side by side, live or from a recording.
+- **Arena** (`/`): pick a game and two agents, then watch them play the same seed, one model at a time, live or from a recording.
 - **Results** (`/results/`): the latest benchmark per game, with 95% intervals.
 - **Learn** (`/learn/`): how Jev and Laya work, with diagrams and sources.
 
@@ -20,20 +20,23 @@ The app is fully client-side, so `next build` produces a static export (`output:
 
 ## Arena layout
 
-One band per model, both in the same order everywhere (first model on top, second below), nothing mirrored. Two columns on wide screens:
+Each model runs its own environment instance: its own traffic, deck or food layout, its own episode, sharing only the seed. They never interact, so the page shows **one model at a time**, picked by a tab, and everything on screen belongs to that model.
 
-- **Left rail**: one band per model, each self-contained — the model's name, the decision number and latency, the move it played with a confidence bar and percentage, any warnings; then that model's own board directly beneath, with the game's stats; then the denser reading under it, how the model split the options and the plain-language state it read, and the end-of-episode line. After both bands, a comparison strip putting both models on one scale for the game's headline measure (metres travelled, food eaten, hands won) — it belongs to neither model, so it sits at the foot of the rail.
-- **Right column**: one raw exchange per model (`REQUEST · state` and `RESPONSE`, straight from the recording, with the played move highlighted). The rest of the request — the `questions` object from the `start` event, the instructions and every option's criteria, identical on every call — is collapsed at the foot of the request pane, and expands to the exact JSON with a copy button. Then **Earlier decisions**: every decision so far, newest first, both models on one row. Picking a row pins the whole page to that decision; "Follow the game again" resumes.
+- **Model tabs**: one button per model (`Jev` / `Laya`), the current one pressed, styled like the game tabs in the header. Switching tabs keeps the decision you are on — decision 12 of Jev becomes decision 12 of Laya — because that side-by-side reading of the same decision is the comparison. Both episodes keep playing underneath; the tab only selects what is displayed. If the other model has no decision at that index, it says so ("It made no decision 26; its episode ended at 16.") rather than showing a different one.
+- **Comparison ribbon**: a thin, static strip below the tabs, on every tab, naming both models with their standing and the game's headline measure — `Jev · driving · 267 m`, `Laya · crashed at 16 · 196 m` — on one shared scale (metres travelled, food eaten, hands won). It never hides, so a visitor who never switches tabs still sees both.
+- **The selected model**, full width: its name, the decision number, latency and retries; its board with the game's stats on the left; and on the right the move it played with a confidence bar and percentage, any warnings, the call-failed line, how it split the options, the plain-language state it read before deciding, and the end-of-episode line.
+- **The raw exchange** for the same model, full width: `REQUEST · state` and `RESPONSE`, straight from the recording, with the played move highlighted. The rest of the request — the `questions` object from the `start` event, the instructions and every option's criteria, identical on every call — is collapsed at the foot of the request pane, and expands to the exact JSON with a copy button.
+- **Earlier decisions** stays paired: every decision so far, newest first, both models on one row, whatever tab is selected. Picking a row pins the whole page to that decision; "Follow the game again" resumes.
 
-Warnings appear when a move is impossible or blocked, when it disagrees with blackjack's basic strategy, or when the model was under 50% confident. The toolbar's Playback controls pause, resume and step one decision either way. On narrow screens everything stacks in the same order: first model's band, second model's band, the comparison strip, the two exchanges, earlier decisions.
+Warnings appear when a move is impossible or blocked, when it disagrees with blackjack's basic strategy, or when the model was under 50% confident. The toolbar's Playback controls pause, resume and step one decision either way. On narrow screens everything stacks in the same order: tabs, comparison ribbon, board, decision readout, raw exchange, earlier decisions.
 
 Everything on the page comes from the recorded events; nothing about the request is reconstructed or paraphrased.
 
 ## Code
 
-- `lib/games.tsx`: everything the UI knows about each game (agents, options with labels and icons, how to order the state, stats under the board, the headline measure for the comparison strip, and Results metrics). Adding a game starts here.
+- `lib/games.tsx`: everything the UI knows about each game (agents, options with labels and icons, how to order the state, stats under the board, the headline measure for the comparison ribbon, and Results metrics). Adding a game starts here.
 - `lib/playback.ts`: plays one decision per step, whatever speed events arrive at, and holds until both sides are ready. It hands each game the previous frame, the next frame and the progress between them, keeps every decision it has played, and can hand back any earlier one (`frameAt`).
-- `lib/decisions.ts`: the pure logic behind the play page — the Earlier-decisions rows from two event streams, the `questions` half of the request from a `start` event, and the shared comparison scale.
+- `lib/decisions.ts`: the pure logic behind the play page — the Earlier-decisions rows from two event streams, the `questions` half of the request from a `start` event, the shared comparison scale, and each model's standing (`driving`, `crashed at 16`) for the comparison ribbon.
 - `lib/draw/`: canvas drawing for Highway (`highway.ts`, a horizontal road with smooth car motion) and Snake (`snake.ts`). Blackjack is plain markup in `components/blackjack-board.tsx`.
 - `lib/insights.ts`: per-game warnings about a decision.
 - `components/arena.tsx`, `model-band.tsx`, `exchange.tsx`, `decision-list.tsx`, `code.tsx`, `results.tsx`, `mermaid.tsx`, `site-nav.tsx`: the pages' building blocks. Mermaid diagrams are black and white on white.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { compareBars, decisionRows, questionsOf } from "./decisions";
-import type { StartEvent, StepEvent } from "./types";
+import { compareBars, decisionRows, questionsOf, standing } from "./decisions";
+import type { EndEvent, StartEvent, StepEvent } from "./types";
+import { EMPTY_VIEW } from "./views";
 
 const step = (t: number, action: string, probs: Record<string, number>, over: Partial<StepEvent> = {}): StepEvent => ({
   type: "step",
@@ -86,5 +87,30 @@ describe("compareBars", () => {
 
   it("never draws a negative bar", () => {
     expect(compareBars([-5, 10])[0].fraction).toBe(0);
+  });
+});
+
+describe("standing", () => {
+  const playing = { ...EMPTY_VIEW, started: true, step: step(7, "IDLE", { IDLE: 0.9 }) };
+  const ended = (end: Partial<EndEvent>) => ({ ...playing, end: { type: "end", steps: 16, ...end } as EndEvent });
+
+  it("says what the model is doing while its episode runs", () => {
+    expect(standing("highway", playing)).toBe("driving");
+    expect(standing("snake", playing)).toBe("moving");
+    expect(standing("blackjack", playing)).toBe("playing");
+  });
+
+  it("says how the episode ended, and when", () => {
+    expect(standing("highway", ended({ crashed: true }))).toBe("crashed at 16");
+    expect(standing("highway", ended({ crashed: false }))).toBe("drove all 16");
+    expect(standing("snake", ended({ died: true }))).toBe("died at 16");
+    expect(standing("snake", ended({ died: false }))).toBe("survived 16");
+    expect(standing("blackjack", ended({}))).toBe("finished");
+  });
+
+  it("says so before anything has been played, and when the run never arrived", () => {
+    expect(standing("highway", EMPTY_VIEW)).toBe("not started");
+    expect(standing("highway", { ...EMPTY_VIEW, started: true })).toBe("starting");
+    expect(standing("highway", { ...playing, failed: "no recording" })).toBe("did not run");
   });
 });
