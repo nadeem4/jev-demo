@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Overpass } from "next/font/google";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import "./globals.css";
 
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-[100dvh]">
         <SiteNav />
         {children}
+        <SiteFooter />
       </body>
     </html>
   );

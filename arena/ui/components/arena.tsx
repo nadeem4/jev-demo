@@ -11,6 +11,7 @@ import type { ArenaEvent, GameId } from "@/lib/types";
 import { BlackjackBoard } from "./blackjack-board";
 import { viewsForGame, type PanelView, type TaggedViews } from "@/lib/views";
 import { ModelPanel } from "./model-panel";
+import { RunItYourself } from "./run-it-yourself";
 
 type Source = "live" | "recording";
 const SIDES = [0, 1] as const;
@@ -184,7 +185,9 @@ export function Arena() {
         </Field>
         {STATIC_SITE ? (
           <p className="max-w-[34ch] self-center text-sm text-ink-soft">
-            These are recorded games. To watch the models play live, run the arena on your machine with <code className="font-semibold text-ink">docker compose up</code>.
+            Recorded games: this site cannot run a model.{" "}
+            <a href="#run-it" className="font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">Run the arena yourself</a>{" "}
+            to watch them play live.
           </p>
         ) : (
         <fieldset className="grid gap-1.5">
@@ -257,6 +260,8 @@ export function Arena() {
           <ModelPanel game={game} agent={agentInfo(agents[1])} view={views[1]} align="right" />
         </div>
       </div>
+
+      {STATIC_SITE && <RunItYourself />}
     </main>
   );
 }
