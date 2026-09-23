@@ -1,0 +1,461 @@
+{
+  "game": "blackjack",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "max_steps": null,
+  "started": "2026-09-22T15:52:57+00:00",
+  "commit": "6cd2a9b",
+  "models": {
+    "jev": {
+      "provider": "gateway",
+      "model": "jev-1.13.0"
+    },
+    "laya": {
+      "checkpoint": "multilingual",
+      "device": "cpu"
+    }
+  },
+  "agents": {
+    "jev": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 29.0,
+          "ci95": [
+            26.568,
+            31.432
+          ]
+        },
+        "hands": {
+          "mean": 20.0,
+          "ci95": [
+            20.0,
+            20.0
+          ]
+        },
+        "wins": {
+          "mean": 7.8,
+          "ci95": [
+            5.929,
+            9.671
+          ]
+        },
+        "losses": {
+          "mean": 10.2,
+          "ci95": [
+            8.521,
+            11.879
+          ]
+        },
+        "draws": {
+          "mean": 2.0,
+          "ci95": [
+            0.988,
+            3.012
+          ]
+        },
+        "net": {
+          "mean": -2.4,
+          "ci95": [
+            -5.809,
+            1.009
+          ]
+        },
+        "return_per_hand": {
+          "mean": -0.12,
+          "ci95": [
+            -0.29,
+            0.05
+          ]
+        },
+        "basic_strategy_match": {
+          "mean": 0.77,
+          "ci95": [
+            0.731,
+            0.81
+          ]
+        }
+      },
+      "reference": {
+        "matches": 0.762,
+        "confidence_gap": 0.402,
+        "bins": [
+          {
+            "said": "50-60%",
+            "right": 0.58,
+            "of": 81
+          },
+          {
+            "said": "60-70%",
+            "right": 0.876,
+            "of": 113
+          },
+          {
+            "said": "70-80%",
+            "right": 0.86,
+            "of": 50
+          },
+          {
+            "said": "80-90%",
+            "right": 0.667,
+            "of": 33
+          },
+          {
+            "said": "90-100%",
+            "right": 0.8,
+            "of": 5
+          }
+        ]
+      },
+      "decisions": {
+        "count": 290,
+        "failed": 8,
+        "retries": 171,
+        "latency_p50_ms": 303.6,
+        "latency_p95_ms": 438.4,
+        "avg_confidence": 0.662
+      }
+    },
+    "laya": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 20.0,
+          "ci95": [
+            20.0,
+            20.0
+          ]
+        },
+        "hands": {
+          "mean": 20.0,
+          "ci95": [
+            20.0,
+            20.0
+          ]
+        },
+        "wins": {
+          "mean": 9.1,
+          "ci95": [
+            7.959,
+            10.241
+          ]
+        },
+        "losses": {
+          "mean": 9.7,
+          "ci95": [
+            8.631,
+            10.769
+          ]
+        },
+        "draws": {
+          "mean": 1.2,
+          "ci95": [
+            0.543,
+            1.857
+          ]
+        },
+        "net": {
+          "mean": -0.6,
+          "ci95": [
+            -2.711,
+            1.511
+          ]
+        },
+        "return_per_hand": {
+          "mean": -0.03,
+          "ci95": [
+            -0.136,
+            0.076
+          ]
+        },
+        "basic_strategy_match": {
+          "mean": 0.495,
+          "ci95": [
+            0.417,
+            0.573
+          ]
+        }
+      },
+      "reference": {
+        "matches": 0.495,
+        "confidence_gap": 0.501,
+        "bins": [
+          {
+            "said": "70-80%",
+            "right": 0.427,
+            "of": 75
+          },
+          {
+            "said": "80-90%",
+            "right": 0.552,
+            "of": 116
+          },
+          {
+            "said": "90-100%",
+            "right": 0.333,
+            "of": 9
+          }
+        ]
+      },
+      "decisions": {
+        "count": 200,
+        "failed": 0,
+        "retries": 0,
+        "latency_p50_ms": 106.7,
+        "latency_p95_ms": 676.9,
+        "avg_confidence": 0.813
+      }
+    },
+    "basic-strategy": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 30.6,
+          "ci95": [
+            28.747,
+            32.453
+          ]
+        },
+        "hands": {
+          "mean": 20.0,
+          "ci95": [
+            20.0,
+            20.0
+          ]
+        },
+        "wins": {
+          "mean": 8.7,
+          "ci95": [
+            7.153,
+            10.247
+          ]
+        },
+        "losses": {
+          "mean": 9.5,
+          "ci95": [
+            8.1,
+            10.9
+          ]
+        },
+        "draws": {
+          "mean": 1.8,
+          "ci95": [
+            0.858,
+            2.742
+          ]
+        },
+        "net": {
+          "mean": -0.8,
+          "ci95": [
+            -3.597,
+            1.997
+          ]
+        },
+        "return_per_hand": {
+          "mean": -0.04,
+          "ci95": [
+            -0.18,
+            0.1
+          ]
+        },
+        "basic_strategy_match": {
+          "mean": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "reference": {
+        "matches": 1.0,
+        "confidence_gap": 0.0,
+        "bins": [
+          {
+            "said": "90-100%",
+            "right": 1.0,
+            "of": 306
+          }
+        ]
+      },
+      "decisions": {
+        "count": 306,
+        "failed": 0,
+        "retries": 0,
+        "latency_p50_ms": 0.0,
+        "latency_p95_ms": 0.0,
+        "avg_confidence": 1.0
+      }
+    },
+    "always-stick": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 20.0,
+          "ci95": [
+            20.0,
+            20.0
+          ]
+        },
+        "hands": {
+          "mean": 20.0,
+          "ci95": [
+            20.0,
+            20.0
+          ]
+        },
+        "wins": {
+          "mean": 9.1,
+          "ci95": [
+            7.959,
+            10.241
+          ]
+        },
+        "losses": {
+          "mean": 9.7,
+          "ci95": [
+            8.631,
+            10.769
+          ]
+        },
+        "draws": {
+          "mean": 1.2,
+          "ci95": [
+            0.543,
+            1.857
+          ]
+        },
+        "net": {
+          "mean": -0.6,
+          "ci95": [
+            -2.711,
+            1.511
+          ]
+        },
+        "return_per_hand": {
+          "mean": -0.03,
+          "ci95": [
+            -0.136,
+            0.076
+          ]
+        },
+        "basic_strategy_match": {
+          "mean": 0.495,
+          "ci95": [
+            0.417,
+            0.573
+          ]
+        }
+      },
+      "reference": {
+        "matches": 0.495,
+        "confidence_gap": 0.505,
+        "bins": [
+          {
+            "said": "90-100%",
+            "right": 0.495,
+            "of": 200
+          }
+        ]
+      },
+      "decisions": {
+        "count": 200,
+        "failed": 0,
+        "retries": 0,
+        "latency_p50_ms": 0.0,
+        "latency_p95_ms": 0.0,
+        "avg_confidence": 1.0
+      }
+    },
+    "random": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 27.2,
+          "ci95": [
+            25.422,
+            28.978
+          ]
+        },
+        "hands": {
+          "mean": 20.0,
+          "ci95": [
+            20.0,
+            20.0
+          ]
+        },
+        "wins": {
+          "mean": 5.4,
+          "ci95": [
+            3.961,
+            6.839
+          ]
+        },
+        "losses": {
+          "mean": 13.9,
+          "ci95": [
+            12.575,
+            15.225
+          ]
+        },
+        "draws": {
+          "mean": 0.7,
+          "ci95": [
+            0.021,
+            1.379
+          ]
+        },
+        "net": {
+          "mean": -8.5,
+          "ci95": [
+            -11.182,
+            -5.818
+          ]
+        },
+        "return_per_hand": {
+          "mean": -0.425,
+          "ci95": [
+            -0.559,
+            -0.291
+          ]
+        },
+        "basic_strategy_match": {
+          "mean": 0.491,
+          "ci95": [
+            0.442,
+            0.541
+          ]
+        }
+      },
+      "reference": {
+        "matches": 0.489,
+        "confidence_gap": 0.511,
+        "bins": [
+          {
+            "said": "90-100%",
+            "right": 0.489,
+            "of": 272
+          }
+        ]
+      },
+      "decisions": {
+        "count": 272,
+        "failed": 0,
+        "retries": 0,
+        "latency_p50_ms": 0.0,
+        "latency_p95_ms": 0.0,
+        "avg_confidence": 1.0
+      }
+    }
+  },
+  "finished": "2026-09-22T16:01:45+00:00"
+}

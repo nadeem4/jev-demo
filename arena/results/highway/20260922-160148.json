@@ -1,0 +1,223 @@
+{
+  "game": "highway",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "max_steps": null,
+  "started": "2026-09-22T16:01:48+00:00",
+  "commit": "e477ea2",
+  "models": {
+    "jev": {
+      "provider": "gateway",
+      "model": "jev-1.13.0"
+    },
+    "laya": {
+      "checkpoint": "multilingual",
+      "device": "cpu"
+    }
+  },
+  "agents": {
+    "jev": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 40.0,
+          "ci95": [
+            40.0,
+            40.0
+          ]
+        },
+        "crashed": {
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.278
+          ]
+        },
+        "distance_m": {
+          "mean": 850.91,
+          "ci95": [
+            825.585,
+            876.235
+          ]
+        },
+        "total_reward": {
+          "mean": 29.532,
+          "ci95": [
+            28.649,
+            30.416
+          ]
+        },
+        "avg_speed": {
+          "mean": 21.238,
+          "ci95": [
+            20.598,
+            21.878
+          ]
+        }
+      },
+      "decisions": {
+        "count": 400,
+        "failed": 1,
+        "retries": 330,
+        "latency_p50_ms": 319.7,
+        "latency_p95_ms": 480.0,
+        "avg_confidence": 0.534
+      }
+    },
+    "laya": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 18.1,
+          "ci95": [
+            10.579,
+            25.621
+          ]
+        },
+        "crashed": {
+          "rate": 0.9,
+          "ci95": [
+            0.596,
+            0.982
+          ]
+        },
+        "distance_m": {
+          "mean": 436.79,
+          "ci95": [
+            267.165,
+            606.415
+          ]
+        },
+        "total_reward": {
+          "mean": 13.871,
+          "ci95": [
+            8.246,
+            19.497
+          ]
+        },
+        "avg_speed": {
+          "mean": 24.007,
+          "ci95": [
+            23.361,
+            24.653
+          ]
+        }
+      },
+      "decisions": {
+        "count": 181,
+        "failed": 0,
+        "retries": 0,
+        "latency_p50_ms": 184.7,
+        "latency_p95_ms": 467.3,
+        "avg_confidence": 0.517
+      }
+    },
+    "idle": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 23.4,
+          "ci95": [
+            15.776,
+            31.024
+          ]
+        },
+        "crashed": {
+          "rate": 0.9,
+          "ci95": [
+            0.596,
+            0.982
+          ]
+        },
+        "distance_m": {
+          "mean": 581.86,
+          "ci95": [
+            391.417,
+            772.303
+          ]
+        },
+        "total_reward": {
+          "mean": 19.014,
+          "ci95": [
+            12.605,
+            25.423
+          ]
+        },
+        "avg_speed": {
+          "mean": 24.571,
+          "ci95": [
+            24.354,
+            24.788
+          ]
+        }
+      },
+      "decisions": {
+        "count": 234,
+        "failed": 0,
+        "retries": 0,
+        "latency_p50_ms": 0.0,
+        "latency_p95_ms": 0.0,
+        "avg_confidence": 1.0
+      }
+    },
+    "random": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 16.3,
+          "ci95": [
+            7.558,
+            25.042
+          ]
+        },
+        "crashed": {
+          "rate": 1.0,
+          "ci95": [
+            0.722,
+            1.0
+          ]
+        },
+        "distance_m": {
+          "mean": 398.06,
+          "ci95": [
+            197.626,
+            598.494
+          ]
+        },
+        "total_reward": {
+          "mean": 12.801,
+          "ci95": [
+            5.944,
+            19.658
+          ]
+        },
+        "avg_speed": {
+          "mean": 24.848,
+          "ci95": [
+            23.199,
+            26.497
+          ]
+        }
+      },
+      "decisions": {
+        "count": 163,
+        "failed": 0,
+        "retries": 0,
+        "latency_p50_ms": 0.0,
+        "latency_p95_ms": 0.0,
+        "avg_confidence": 1.0
+      }
+    }
+  },
+  "finished": "2026-09-22T16:13:25+00:00"
+}

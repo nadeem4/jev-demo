@@ -12,6 +12,4 @@ __pycache__/
 next-env.d.ts
 *.tsbuildinfo
 out/
-arena/results/
-arena/ui/public/data/
 .vercel/

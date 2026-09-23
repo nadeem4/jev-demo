@@ -1,0 +1,303 @@
+{
+  "started": "2026-09-22T18:52:44+00:00",
+  "agents": {
+    "jev": {
+      "highway": {
+        "sensitivity": 0.747,
+        "pairs": [
+          {
+            "why": "a car right in front, or an empty road",
+            "moved": 0.95,
+            "a": {
+              "LANE_LEFT": 0.53,
+              "SLOWER": 0.42,
+              "LANE_RIGHT": 0.05,
+              "FASTER": 0,
+              "IDLE": 0
+            },
+            "b": {
+              "IDLE": 0.57,
+              "FASTER": 0.38,
+              "SLOWER": 0,
+              "LANE_RIGHT": 0,
+              "LANE_LEFT": 0.05
+            }
+          },
+          {
+            "why": "the left lane is free, or blocked",
+            "moved": 0.89,
+            "a": {
+              "LANE_LEFT": 0.89,
+              "FASTER": 0,
+              "SLOWER": 0.1,
+              "LANE_RIGHT": 0,
+              "IDLE": 0.01
+            },
+            "b": {
+              "FASTER": 0,
+              "LANE_RIGHT": 0.79,
+              "SLOWER": 0.2,
+              "IDLE": 0.01,
+              "LANE_LEFT": 0
+            }
+          },
+          {
+            "why": "there is no lane to the right of the rightmost lane",
+            "moved": 0.4,
+            "a": {
+              "LANE_LEFT": 0.86,
+              "SLOWER": 0.14,
+              "FASTER": 0,
+              "IDLE": 0,
+              "LANE_RIGHT": 0
+            },
+            "b": {
+              "SLOWER": 0.45,
+              "LANE_LEFT": 0.46,
+              "FASTER": 0.01,
+              "LANE_RIGHT": 0.06,
+              "IDLE": 0.02
+            }
+          }
+        ]
+      },
+      "snake": {
+        "sensitivity": 0.64,
+        "pairs": [
+          {
+            "why": "a wall straight ahead, or a clear run",
+            "moved": 0.93,
+            "a": {
+              "TURN_RIGHT": 0.79,
+              "TURN_LEFT": 0.19,
+              "STRAIGHT": 0.02
+            },
+            "b": {
+              "TURN_RIGHT": 0.02,
+              "STRAIGHT": 0.95,
+              "TURN_LEFT": 0.03
+            }
+          },
+          {
+            "why": "food to the left, or food to the right",
+            "moved": 0.28,
+            "a": {
+              "TURN_RIGHT": 0.11,
+              "STRAIGHT": 0.52,
+              "TURN_LEFT": 0.37
+            },
+            "b": {
+              "TURN_RIGHT": 0.39,
+              "TURN_LEFT": 0.09,
+              "STRAIGHT": 0.52
+            }
+          },
+          {
+            "why": "every turn is fatal except one",
+            "moved": 0.71,
+            "a": {
+              "TURN_RIGHT": 0.02,
+              "TURN_LEFT": 0.02,
+              "STRAIGHT": 0.96
+            },
+            "b": {
+              "TURN_RIGHT": 0.47,
+              "STRAIGHT": 0.25,
+              "TURN_LEFT": 0.28
+            }
+          }
+        ]
+      },
+      "blackjack": {
+        "sensitivity": 0.43,
+        "pairs": [
+          {
+            "why": "8 cannot bust, 20 almost certainly does",
+            "moved": 0.61,
+            "a": {
+              "HIT": 0.79,
+              "STICK": 0.21
+            },
+            "b": {
+              "HIT": 0.18,
+              "STICK": 0.82
+            }
+          },
+          {
+            "why": "on 16 the dealer's card decides it",
+            "moved": 0.35,
+            "a": {
+              "HIT": 0.23,
+              "STICK": 0.77
+            },
+            "b": {
+              "HIT": 0.58,
+              "STICK": 0.42
+            }
+          },
+          {
+            "why": "a soft 17 cannot bust, a hard 17 can",
+            "moved": 0.33,
+            "a": {
+              "STICK": 0.3,
+              "HIT": 0.7
+            },
+            "b": {
+              "HIT": 0.37,
+              "STICK": 0.63
+            }
+          }
+        ]
+      }
+    },
+    "laya": {
+      "highway": {
+        "sensitivity": 0.421,
+        "pairs": [
+          {
+            "why": "a car right in front, or an empty road",
+            "moved": 0.48,
+            "a": {
+              "LANE_LEFT": 0.398,
+              "IDLE": 0.308,
+              "LANE_RIGHT": 0.161,
+              "FASTER": 0.035,
+              "SLOWER": 0.099
+            },
+            "b": {
+              "LANE_LEFT": 0.878,
+              "IDLE": 0.082,
+              "LANE_RIGHT": 0.029,
+              "FASTER": 0.004,
+              "SLOWER": 0.008
+            }
+          },
+          {
+            "why": "the left lane is free, or blocked",
+            "moved": 0.142,
+            "a": {
+              "LANE_LEFT": 0.481,
+              "IDLE": 0.235,
+              "LANE_RIGHT": 0.186,
+              "FASTER": 0.025,
+              "SLOWER": 0.073
+            },
+            "b": {
+              "LANE_LEFT": 0.608,
+              "IDLE": 0.222,
+              "LANE_RIGHT": 0.058,
+              "FASTER": 0.023,
+              "SLOWER": 0.089
+            }
+          },
+          {
+            "why": "there is no lane to the right of the rightmost lane",
+            "moved": 0.642,
+            "a": {
+              "LANE_LEFT": 0.01,
+              "IDLE": 0.132,
+              "LANE_RIGHT": 0.805,
+              "FASTER": 0.011,
+              "SLOWER": 0.042
+            },
+            "b": {
+              "LANE_LEFT": 0.261,
+              "IDLE": 0.377,
+              "LANE_RIGHT": 0.164,
+              "FASTER": 0.038,
+              "SLOWER": 0.161
+            }
+          }
+        ]
+      },
+      "snake": {
+        "sensitivity": 0.146,
+        "pairs": [
+          {
+            "why": "a wall straight ahead, or a clear run",
+            "moved": 0.051,
+            "a": {
+              "TURN_LEFT": 0.074,
+              "STRAIGHT": 0.873,
+              "TURN_RIGHT": 0.054
+            },
+            "b": {
+              "TURN_LEFT": 0.052,
+              "STRAIGHT": 0.843,
+              "TURN_RIGHT": 0.105
+            }
+          },
+          {
+            "why": "food to the left, or food to the right",
+            "moved": 0.335,
+            "a": {
+              "TURN_LEFT": 0.825,
+              "STRAIGHT": 0.137,
+              "TURN_RIGHT": 0.038
+            },
+            "b": {
+              "TURN_LEFT": 0.491,
+              "STRAIGHT": 0.354,
+              "TURN_RIGHT": 0.155
+            }
+          },
+          {
+            "why": "every turn is fatal except one",
+            "moved": 0.052,
+            "a": {
+              "TURN_LEFT": 0.12,
+              "STRAIGHT": 0.544,
+              "TURN_RIGHT": 0.336
+            },
+            "b": {
+              "TURN_LEFT": 0.095,
+              "STRAIGHT": 0.596,
+              "TURN_RIGHT": 0.309
+            }
+          }
+        ]
+      },
+      "blackjack": {
+        "sensitivity": 0.037,
+        "pairs": [
+          {
+            "why": "8 cannot bust, 20 almost certainly does",
+            "moved": 0.049,
+            "a": {
+              "STICK": 0.815,
+              "HIT": 0.185
+            },
+            "b": {
+              "STICK": 0.766,
+              "HIT": 0.234
+            }
+          },
+          {
+            "why": "on 16 the dealer's card decides it",
+            "moved": 0.012,
+            "a": {
+              "STICK": 0.829,
+              "HIT": 0.171
+            },
+            "b": {
+              "STICK": 0.84,
+              "HIT": 0.16
+            }
+          },
+          {
+            "why": "a soft 17 cannot bust, a hard 17 can",
+            "moved": 0.049,
+            "a": {
+              "STICK": 0.894,
+              "HIT": 0.106
+            },
+            "b": {
+              "STICK": 0.845,
+              "HIT": 0.155
+            }
+          }
+        ]
+      }
+    }
+  }
+}

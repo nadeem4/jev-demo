@@ -1,0 +1,279 @@
+{
+  "game": "snake",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "max_steps": null,
+  "started": "2026-09-22T16:13:29+00:00",
+  "commit": "8ea6b41",
+  "models": {
+    "jev": {
+      "provider": "gateway",
+      "model": "jev-1.13.0"
+    },
+    "laya": {
+      "checkpoint": "multilingual",
+      "device": "cpu"
+    }
+  },
+  "agents": {
+    "jev": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 73.3,
+          "ci95": [
+            52.242,
+            94.358
+          ]
+        },
+        "died": {
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.278
+          ]
+        },
+        "food_eaten": {
+          "mean": 1.8,
+          "ci95": [
+            0.0,
+            4.386
+          ]
+        },
+        "length": {
+          "mean": 4.8,
+          "ci95": [
+            2.214,
+            7.386
+          ]
+        }
+      },
+      "reference": {
+        "matches": 0.372,
+        "confidence_gap": 0.498,
+        "bins": [
+          {
+            "said": "50-60%",
+            "right": 0.196,
+            "of": 138
+          },
+          {
+            "said": "60-70%",
+            "right": 0.177,
+            "of": 181
+          },
+          {
+            "said": "70-80%",
+            "right": 0.451,
+            "of": 235
+          },
+          {
+            "said": "80-90%",
+            "right": 0.938,
+            "of": 65
+          },
+          {
+            "said": "90-100%",
+            "right": 0.833,
+            "of": 18
+          }
+        ]
+      },
+      "decisions": {
+        "count": 733,
+        "failed": 5,
+        "retries": 730,
+        "latency_p50_ms": 306.8,
+        "latency_p95_ms": 431.1,
+        "avg_confidence": 0.657
+      }
+    },
+    "laya": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 16.5,
+          "ci95": [
+            2.736,
+            30.264
+          ]
+        },
+        "died": {
+          "rate": 0.9,
+          "ci95": [
+            0.596,
+            0.982
+          ]
+        },
+        "food_eaten": {
+          "mean": 0.5,
+          "ci95": [
+            0.0,
+            1.006
+          ]
+        },
+        "length": {
+          "mean": 3.5,
+          "ci95": [
+            2.994,
+            4.006
+          ]
+        }
+      },
+      "reference": {
+        "matches": 0.382,
+        "confidence_gap": 0.534,
+        "bins": [
+          {
+            "said": "50-60%",
+            "right": 0.37,
+            "of": 46
+          },
+          {
+            "said": "60-70%",
+            "right": 0.356,
+            "of": 45
+          },
+          {
+            "said": "70-80%",
+            "right": 0.208,
+            "of": 24
+          },
+          {
+            "said": "80-90%",
+            "right": 0.5,
+            "of": 28
+          },
+          {
+            "said": "90-100%",
+            "right": 0.615,
+            "of": 13
+          }
+        ]
+      },
+      "decisions": {
+        "count": 165,
+        "failed": 0,
+        "retries": 0,
+        "latency_p50_ms": 154.0,
+        "latency_p95_ms": 175.2,
+        "avg_confidence": 0.674
+      }
+    },
+    "greedy": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 131.8,
+          "ci95": [
+            106.311,
+            157.289
+          ]
+        },
+        "died": {
+          "rate": 0.4,
+          "ci95": [
+            0.168,
+            0.687
+          ]
+        },
+        "food_eaten": {
+          "mean": 17.3,
+          "ci95": [
+            14.19,
+            20.41
+          ]
+        },
+        "length": {
+          "mean": 20.3,
+          "ci95": [
+            17.19,
+            23.41
+          ]
+        }
+      },
+      "reference": {
+        "matches": 1.0,
+        "confidence_gap": 0.0,
+        "bins": [
+          {
+            "said": "90-100%",
+            "right": 1.0,
+            "of": 1318
+          }
+        ]
+      },
+      "decisions": {
+        "count": 1318,
+        "failed": 0,
+        "retries": 0,
+        "latency_p50_ms": 0.0,
+        "latency_p95_ms": 0.0,
+        "avg_confidence": 1.0
+      }
+    },
+    "random": {
+      "episodes": 10,
+      "metrics": {
+        "steps": {
+          "mean": 16.4,
+          "ci95": [
+            9.521,
+            23.279
+          ]
+        },
+        "died": {
+          "rate": 1.0,
+          "ci95": [
+            0.722,
+            1.0
+          ]
+        },
+        "food_eaten": {
+          "mean": 0.2,
+          "ci95": [
+            0.0,
+            0.502
+          ]
+        },
+        "length": {
+          "mean": 3.2,
+          "ci95": [
+            2.898,
+            3.502
+          ]
+        }
+      },
+      "reference": {
+        "matches": 0.341,
+        "confidence_gap": 0.659,
+        "bins": [
+          {
+            "said": "90-100%",
+            "right": 0.341,
+            "of": 164
+          }
+        ]
+      },
+      "decisions": {
+        "count": 164,
+        "failed": 0,
+        "retries": 0,
+        "latency_p50_ms": 0.0,
+        "latency_p95_ms": 0.0,
+        "avg_confidence": 1.0
+      }
+    }
+  },
+  "finished": "2026-09-22T16:38:47+00:00"
+}
