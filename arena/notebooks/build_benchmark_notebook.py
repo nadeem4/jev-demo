@@ -3,9 +3,6 @@ the long cell sources reviewable in git and easy to edit."""
 import json
 from pathlib import Path
 
-REPO = "https://github.com/nadeem4/jev-demo.git"
-
-
 def md(text):
     return {"cell_type": "markdown", "metadata": {}, "source": text.strip().splitlines(keepends=True)}
 
@@ -31,29 +28,9 @@ left sidebar) and give this notebook access. Without it, the notebook runs Laya 
 baselines only.
 """),
     md("## 1. Setup"),
-    code(f"""
-# The arena code. If the repository is private, create a Colab secret named GITHUB_TOKEN
-# with a token that can read it; a public repository needs nothing.
-import os, subprocess, sys
-from pathlib import Path
-
-REPO = "{REPO}"
-token = None
-try:
-    from google.colab import userdata
-    token = userdata.get("GITHUB_TOKEN")
-except Exception:
-    pass
-
-url = REPO.replace("https://", f"https://{{token}}@") if token else REPO
-if not Path("jev-demo").exists():
-    subprocess.run(["git", "clone", "--depth", "1", url, "jev-demo"], check=True)
-sys.path.insert(0, str(Path("jev-demo/arena").resolve()))
-print("arena code ready")
-"""),
     code("""
-!pip install -q highway-env laya
-print("installed")
+# Installs the arena and everything it needs (highway-env, Laya). Colab already has torch.
+!pip install -q "arena @ git+https://github.com/nadeem4/jev-demo.git#subdirectory=arena"
 """),
     code("""
 import torch
