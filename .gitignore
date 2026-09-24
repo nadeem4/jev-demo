@@ -14,4 +14,4 @@ next-env.d.ts
 out/
 .vercel/
 /rerank/runs/
-/rerank/pilot.log
+/rerank/*.log

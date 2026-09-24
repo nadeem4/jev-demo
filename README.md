@@ -72,7 +72,7 @@ Both demos are that same loop with a different consequence on the end. The arena
 |---|---|
 | [arena](arena/) | Jev vs open-source Laya (plus baselines) playing highway-env, Snake and Blackjack with zero training. Watch both play the same scenario, with every request and answer on the page, live or from recordings, and benchmark them |
 | [agent-watchdog](agent-watchdog/) | Supervises Claude Code: scores every tool call for reversibility, scope drift, prompt injection, and looping before it runs |
-| [rerank](rerank/) | RAG re-ranking on BEIR NFCorpus: BM25 retrieves 50 passages, then one typed question per passage re-orders them. BM25, a MS MARCO cross-encoder and Laya re-rank the same candidates, scored with pytrec_eval, every request and response on disk. Zero-shot, nothing trained |
+| [rerank](rerank/) | RAG re-ranking on BEIR NFCorpus: BM25 retrieves the candidates, then one typed question per passage re-orders them. Jev, a MS MARCO cross-encoder and Laya on two checkpoints re-rank the same candidates, scored with pytrec_eval, every request and response on disk. Over all 323 test queries, Jev (+0.035 nDCG@10) and the cross-encoder (+0.020) beat the BM25 floor and both Laya checkpoints lose to it, every interval clear of zero. Zero-shot, nothing trained |
 
 ## How the arena makes one decision
 
