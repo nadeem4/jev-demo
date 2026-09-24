@@ -13,5 +13,3 @@ next-env.d.ts
 *.tsbuildinfo
 out/
 .vercel/
-/rerank/runs/
-/rerank/*.log
