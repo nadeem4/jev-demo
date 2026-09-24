@@ -222,8 +222,9 @@ export default function Page() {
         <p className="max-w-[70ch] text-ink-soft">
           The names are not standard. The yes-or-no question is <code className="font-mono text-ink">noul</code> to Laya, which
           answers in a field of the same name, and <code className="font-mono text-ink">boolean</code> to Jev, which answers in
-          a field called <code className="font-mono text-ink">probability</code>. Send Laya&apos;s name to Jev and you get back{" "}
-          <code className="font-mono text-ink">400 Invalid discriminator value. Expected &apos;choice&apos; | &apos;score&apos; | &apos;boolean&apos;</code>.
+          a field called <code className="font-mono text-ink">probability</code>. Jev&apos;s schema accepts{" "}
+          <code className="font-mono text-ink">choice</code>, <code className="font-mono text-ink">score</code> and{" "}
+          <code className="font-mono text-ink">boolean</code>, so sending Laya&apos;s name to Jev is rejected with a 400.
           The question is the same; only the dialect differs.
           <span className="ml-2 rounded-sm border border-line bg-sunk px-1.5 py-px align-middle font-mono text-micro font-normal text-ink-soft">measured here</span>
         </p>
