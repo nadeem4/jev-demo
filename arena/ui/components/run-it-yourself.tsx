@@ -8,8 +8,8 @@ const STEPS: { title: string; body: string; code?: string }[] = [
   },
   {
     title: "Add a Jev key",
-    body: "Put an AI Gateway key in .env at the repo root. Laya needs no key: it downloads once and runs on your machine. Without a Jev key you can still watch Laya and the baselines.",
-    code: "AI_GATEWAY_API_KEY=your_key",
+    body: "Put an OpenRouter key in .env at the repo root. Laya needs no key: it downloads once and runs on your machine. Without a Jev key you can still watch Laya and the baselines.",
+    code: "OPENROUTER_API_KEY=your_key",
   },
   {
     title: "Start it",
