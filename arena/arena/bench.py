@@ -134,8 +134,7 @@ def usable_device(torch):
 def _model_info(names, laya_checkpoint):
     info = {}
     if "jev" in names:
-        info["jev"] = {"provider": "typesafe" if agents_mod.jev._key("TYPESAFE_API_KEY") else "gateway",
-                       "model": agents_mod.jev.TYPESAFE_MODEL}
+        info["jev"] = {"provider": "openrouter", "model": agents_mod.jev.JEV_MODEL}
     if "laya" in names:
         import torch
         info["laya"] = {"checkpoint": laya_checkpoint or "english", "device": usable_device(torch)}

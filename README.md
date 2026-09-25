@@ -109,11 +109,14 @@ Hard rules run first and never reach the model, and if Jev errors or takes longe
 Put your Jev key in `.env` at the repo root. All demos share it.
 
 ```
-AI_GATEWAY_API_KEY=your_key       # Vercel AI Gateway (typesafe-ai/jev)
-TYPESAFE_API_KEY=your_key         # optional: TypeSafe's API directly, preferred when set
+OPENROUTER_API_KEY=your_key       # OpenRouter (typesafe/jev-1.13-20260917)
 ```
 
-The Vercel account needs a credit card on file before AI Gateway will serve requests.
+Both demos post to `openrouter.ai/api/v1/systemone`, OpenRouter's decision route, and pin the
+explicit model version rather than the `~typesafe/jev-latest` alias. Decision models are hidden
+from the default `/api/v1/models` listing; they show up under `?output_modalities=decisions`.
+A free-tier account works, with a monthly cap and frequent rate limits (HTTP 429), which both
+demos retry.
 
 Laya needs no key. It downloads its weights (about 2.3 GB) on first use and runs on your machine.
 

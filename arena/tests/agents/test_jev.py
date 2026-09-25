@@ -12,30 +12,16 @@ def _http_error(code):
     return urllib.error.HTTPError("u", code, "err", {}, None)
 
 
-def test_posts_state_and_questions_to_the_gateway():
+def test_posts_state_and_questions_to_openrouter_with_a_pinned_model():
     sent = {}
     def post(url, headers, body):
         sent.update(url=url, headers=headers, body=body)
         return {"answers": {"action": {"type": "choice", "choice": "B", "probabilities": {"A": 0.1, "B": 0.9}}}}
     answers = JevAgent(api_key="k", post=post).decide(STATE, QUESTIONS)
     assert answers["action"]["choice"] == "B"
-    assert sent["url"].endswith("/evaluation-model")
-    assert sent["headers"]["Authorization"] == "Bearer k"
-    assert sent["headers"]["ai-model-id"] == "typesafe-ai/jev"
-    assert sent["body"] == {"state": STATE, "questions": QUESTIONS}
-
-
-def test_can_call_typesafe_directly_with_a_pinned_model():
-    sent = {}
-    def post(url, headers, body):
-        sent.update(url=url, headers=headers, body=body)
-        return {"answers": {"ok": True}}
-    agent = JevAgent(api_key="ts", provider="typesafe", post=post)
-    assert agent.decide(STATE, QUESTIONS) == {"ok": True}
-    assert sent["url"] == "https://api.typesafe.ai/v1/systemone"
-    assert sent["headers"]["Authorization"] == "Bearer ts"
-    assert "ai-model-id" not in sent["headers"]
-    assert sent["body"] == {"model": "jev-1.13.0", "state": STATE, "questions": QUESTIONS}
+    assert sent["url"] == "https://openrouter.ai/api/v1/systemone"
+    assert sent["headers"] == {"Authorization": "Bearer k", "Content-Type": "application/json"}
+    assert sent["body"] == {"model": "typesafe/jev-1.13-20260917", "state": STATE, "questions": QUESTIONS}
 
 
 def test_retries_rate_limits_and_overload_then_succeeds():
@@ -87,23 +73,14 @@ def test_reports_latency_of_the_successful_attempt_only():
     assert agent.last_latency_ms < 150
 
 
-def test_from_env_prefers_a_typesafe_key_over_the_gateway(monkeypatch):
-    monkeypatch.setenv("TYPESAFE_API_KEY", "ts")
-    monkeypatch.setenv("AI_GATEWAY_API_KEY", "gw")
-    assert jev.from_env().provider == "typesafe"
-
-
-def test_from_env_falls_back_to_the_gateway_key(monkeypatch, tmp_path):
-    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
-    monkeypatch.setenv("AI_GATEWAY_API_KEY", "gw")
-    monkeypatch.setattr(jev, "ROOT_ENV", tmp_path / "missing.env")
-    assert jev.from_env().provider == "gateway"
+def test_from_env_reads_the_openrouter_key(monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or")
+    assert jev.from_env().headers["Authorization"] == "Bearer or"
 
 
 def test_from_env_reads_the_repo_root_env_file(monkeypatch, tmp_path):
-    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
-    monkeypatch.delenv("AI_GATEWAY_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     env = tmp_path / ".env"
-    env.write_text("AI_GATEWAY_API_KEY=from-file\n")
+    env.write_text("OPENROUTER_API_KEY=from-file\n")
     monkeypatch.setattr(jev, "ROOT_ENV", env)
     assert jev.from_env().headers["Authorization"] == "Bearer from-file"

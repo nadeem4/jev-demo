@@ -24,7 +24,7 @@ flowchart LR
 
 - **`arena/games/`** has one module per game. Each game defines its `questions`, `options`, a `fallback` move, its `baselines`, and `reset(seed)`, `describe()`, `step(action)`, `frame()` and `summary()`. Games describe the world in words ("car close ahead (12 m), 4 m/s slower than you", "BLOCKED: wall right next to you", "16 (hard: no ace counted as 11)") because decision models read meaning and can't do arithmetic.
 - **`arena/agents/`** has one module per model, all with the same interface, `decide(state, questions) -> answers`:
-  - `jev.py`: calls TypeSafe directly or through Vercel AI Gateway, retries 429 and 529 with backoff, and reports only the successful attempt's latency.
+  - `jev.py`: calls Jev through OpenRouter, retries 429 and 529 with backoff, and reports only the successful attempt's latency.
   - `laya.py`: downloads the weights on first use and runs the chosen checkpoint locally.
   - `baselines.py`: generic constant and random agents. Game-specific baselines live with their game.
   - `make_agent(name, game)` in `__init__.py` is the only place an agent is chosen by name.
@@ -55,10 +55,12 @@ uv sync
 
 `uv sync` installs the `laya` package, which is code only. Laya's weights (2.3 GB) download into `models/laya` the first time Laya runs. They go into a plain folder, not the Hugging Face cache, because the cache uses symlinks that fail on Windows without Developer Mode. Set `LAYA_PATH` to keep them elsewhere.
 
-Jev looks for keys in the environment, then in the repo-root `.env`:
+Jev looks for `OPENROUTER_API_KEY` in the environment, then in the repo-root `.env`.
 
-- `TYPESAFE_API_KEY` is preferred. It calls `api.typesafe.ai/v1/systemone` directly with the pinned model `jev-1.13.0`, so runs are reproducible. TypeSafe signups are currently paused.
-- `AI_GATEWAY_API_KEY` is the fallback, through Vercel AI Gateway (`typesafe-ai/jev`). The Gateway rate-limits often (HTTP 429), and the agent retries those with backoff.
+- It posts to `openrouter.ai/api/v1/systemone`, the decision route that takes `state` and `questions`. `chat/completions` rejects that shape.
+- The model is pinned to `typesafe/jev-1.13-20260917`, not the `~typesafe/jev-latest` alias, so runs are reproducible.
+- Decision models do not appear in the default `/api/v1/models` listing; they are under `/api/v1/models?output_modalities=decisions`.
+- A free-tier account has a monthly cap and rate-limits (HTTP 429); the agent retries those, and 529s, with backoff.
 
 Locally, PyTorch comes from the CUDA 12.6 index (`pyproject.toml`). If your NVIDIA driver is too old, Laya falls back to CPU, at roughly 200 to 2,000 ms per decision instead of about 33 ms on a GPU.
 
@@ -110,8 +112,11 @@ cd ui && npm run deploy          # build the static site and deploy it
 `notebooks/colab_benchmark.ipynb` runs what a laptop cannot: a fair speed test with Laya on a
 T4, 50 episodes per agent per game, and a real-time round where each decision has a deadline
 and late answers are not used (`--deadline-ms`, also available from the command line). It needs
-a GPU runtime, and a Colab secret `AI_GATEWAY_API_KEY` to include Jev. Results download as a zip
+a GPU runtime, and a Colab secret to include Jev. Results download as a zip
 to copy into `results/` and `runs/`, then publish with `arena.export` and `npm run deploy`.
+
+That notebook has not been migrated: it still asks for `AI_GATEWAY_API_KEY` and the retired Vercel
+AI Gateway, so Jev will not answer there until it is updated to `OPENROUTER_API_KEY`.
 
 The notebook is generated: edit `notebooks/build_benchmark_notebook.py` and run it, so the cell
 sources stay reviewable in git.

@@ -5,9 +5,9 @@ A Claude Code hook that uses Jev to check every `Bash`, `PowerShell`, `Write`, a
 | Question | Jev type | Catches |
 |---|---|---|
 | `reversibility` | choice: read_only / reversible / irreversible | `rm -rf`, publishing, force-pushes |
-| `in_scope` | boolean | The agent drifting away from the user's task |
-| `off_task_goal` | boolean | Injected instructions: exfiltration, remote code, credential changes |
-| `looping` | boolean | The same attempt repeated without progress |
+| `in_scope` | noul (yes/no: one probability) | The agent drifting away from the user's task |
+| `off_task_goal` | noul | Injected instructions: exfiltration, remote code, credential changes |
+| `looping` | noul | The same attempt repeated without progress |
 
 Code, not Jev, makes the decision (`src/decide.js`):
 
@@ -32,12 +32,13 @@ flowchart LR
 
 - **Hard rules** (`src/rules.js`) block the worst cases without consulting Jev: deleting `/`, `~`, a drive root or the user profile, piping a download into a shell or `Invoke-Expression`, and force-pushing to main or master. Text written to manipulate Jev can shift its answers, so these cases never depend on it.
 - **Only the agent's own action is sent to Jev**, never file contents it read (`src/jev.js`). Repeat counts are computed in code because Jev can't count reliably.
+- **The call** is a plain `POST` to `openrouter.ai/api/v1/systemone` with `OPENROUTER_API_KEY`, pinned to the model `typesafe/jev-1.13-20260917`. Decision models are not in the default `/api/v1/models` listing; they are under `?output_modalities=decisions`.
 - **Fail-safe:** if Jev errors or takes longer than 3s, the decision is **ask**, never a silent allow.
 - **State** lives in `.watchdog/` (git-ignored): `sessions/<id>.json` holds the task and the last 10 actions, and `decisions.jsonl` records every decision with Jev's probabilities and the latency.
 
 ## Setup
 
-1. Put your AI Gateway key in the repo-root `.env` (see the [root README](../README.md)).
+1. Put your OpenRouter key in the repo-root `.env` (see the [root README](../README.md)).
 2. Run `npm install` in this folder.
 3. Check Jev access: `node scripts/smoke-test.mjs`
 4. Register the hook in the project you want watched, in `.claude/settings.json`:
@@ -63,7 +64,7 @@ All thresholds are in `THRESHOLDS` in `src/decide.js`. The questions sent to Jev
 npm test
 ```
 
-The unit tests cover the rules, the decision policy, the Jev caller (with a fake `evaluate`), the hook core, and the entry script run as a subprocess. None of them call the network.
+The unit tests cover the rules, the decision policy, the Jev caller (with a fake `evaluate` and a fake `fetch`), the hook core, and the entry script run as a subprocess. None of them call the network.
 
 ## Status
 

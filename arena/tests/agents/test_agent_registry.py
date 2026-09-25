@@ -20,8 +20,7 @@ def test_each_game_has_its_own_baselines():
 
 
 def test_builds_jev_from_the_environment(monkeypatch):
-    monkeypatch.setenv("AI_GATEWAY_API_KEY", "gw")
-    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or")
     assert make_agent("jev").name == "jev"
 
 
