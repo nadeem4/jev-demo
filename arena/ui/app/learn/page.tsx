@@ -220,12 +220,15 @@ export default function Page() {
           </table>
         </div>
         <p className="max-w-[70ch] text-ink-soft">
-          The names are not standard. The yes-or-no question is <code className="font-mono text-ink">noul</code> to Laya, which
-          answers in a field of the same name, and <code className="font-mono text-ink">boolean</code> to Jev, which answers in
-          a field called <code className="font-mono text-ink">probability</code>. Jev&apos;s schema accepts{" "}
-          <code className="font-mono text-ink">choice</code>, <code className="font-mono text-ink">score</code> and{" "}
-          <code className="font-mono text-ink">boolean</code>, so sending Laya&apos;s name to Jev is rejected with a 400.
-          The question is the same; only the dialect differs.
+          The names are not standard, and the difference is not between the models. It is between the doors you knock on.
+          Laya calls the yes-or-no question <code className="font-mono text-ink">noul</code> and answers in a field of the same
+          name. Jev does too, through TypeSafe&apos;s own route: we asked it one and got back{" "}
+          <code className="font-mono text-ink">{"{\"type\": \"noul\", \"noul\": 0.99}"}</code>. Through Vercel&apos;s
+          gateway the same model wanted that question typed{" "}
+          <code className="font-mono text-ink">boolean</code> instead, answering in a field called{" "}
+          <code className="font-mono text-ink">probability</code>, and rejected{" "}
+          <code className="font-mono text-ink">noul</code> with a 400. One model, two vocabularies, decided by the gateway
+          rather than by the model. An earlier version of this page blamed the models for it.
           <span className="ml-2 rounded-sm border border-line bg-sunk px-1.5 py-px align-middle font-mono text-micro font-normal text-ink-soft">measured here</span>
         </p>
         <figure className="grid min-w-0 gap-2">

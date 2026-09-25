@@ -35,6 +35,15 @@ function best(run: Run, spec: ResultMetric) {
   return known.reduce((a, b) => ((spec.better === "higher" ? b[1] > a[1] : b[1] < a[1]) ? b : a))[0];
 }
 
+// Runs are labelled with the route they actually used. Older runs went through
+// Vercel's gateway; current ones go through OpenRouter.
+const PROVIDERS: Record<string, string> = {
+  typesafe: "TypeSafe",
+  openrouter: "OpenRouter",
+  gateway: "Vercel AI Gateway",
+};
+const providerName = (p: string) => PROVIDERS[p] ?? p;
+
 export function Results() {
   const [runs, setRuns] = useState<Partial<Record<GameId, Run[]>> | null>(null);
   const [error, setError] = useState(false);
@@ -106,7 +115,7 @@ function GameResults({ run, older }: { run: Run; older: number }) {
       <p className="mt-2 text-ink-soft">
         {episodes} episodes per agent on seeds {run.seeds[0]} to {run.seeds[run.seeds.length - 1]}, run {date}
         {run.commit && <> at commit <code>{run.commit}</code></>}.
-        {run.models.jev && <> Jev via {run.models.jev.provider === "typesafe" ? `TypeSafe (${run.models.jev.model})` : "Vercel AI Gateway"}.</>}
+        {run.models.jev && <> Jev via {providerName(run.models.jev.provider)} ({run.models.jev.model}).</>}
         {run.models.laya && <> Laya {run.models.laya.checkpoint} checkpoint on {run.models.laya.device.toUpperCase()}.</>}
         {older > 0 && <> {older} earlier run{older > 1 ? "s" : ""} saved.</>}
       </p>

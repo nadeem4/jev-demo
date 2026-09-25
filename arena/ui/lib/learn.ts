@@ -146,7 +146,7 @@ export const JEV: Model = {
     cost: {
       published: true,
       rows: [
-        { label: "Access", claim: { text: "A paid API, from TypeSafe directly or through Vercel AI Gateway. Signups were paused shortly after launch.", from: "source" } },
+        { label: "Access", claim: { text: "A paid API. We have reached it three ways: TypeSafe directly, Vercel AI Gateway, and OpenRouter, which mirrors TypeSafe's own route. Signups were paused shortly after launch.", from: "source" } },
         { label: "Price", claim: { text: "$0.042 per million input tokens. Output is free, because there is no generated text.", from: "source" } },
         { label: "Speed, stated", claim: { text: "70 to 500 ms per request", from: "source" } },
         { label: "Speed, measured", claim: { text: "p50 of about 305 ms through the Gateway, network included", from: "measured" } },
